@@ -1,6 +1,6 @@
 name: scale_guard
 description: ScaleGuard — deterministic architecture scale risk scanner for Flutter projects.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/PavelK2254/flutter_scaleguard
 
 environment:

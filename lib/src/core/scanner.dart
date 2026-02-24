@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'config.dart';
 import 'index.dart';
+import 'rule_metadata.dart';
+import '../model/category_aggregation.dart';
 import '../model/rule_result.dart';
 import '../model/scan_report.dart';
 import '../rules/cross_feature_coupling.dart';
@@ -89,11 +91,14 @@ Future<ScanReport> runScan(String projectPath, {ScannerConfig? config, List<Rule
     results.add(rule.run(index, resolvedConfig));
   }
   final scoreResult = ScoringEngine.run(results);
+  final aggregation =
+      CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
   return ScanReport(
     score: scoreResult.score,
     riskLevel: scoreResult.riskLevel,
     ruleResults: results,
     timestamp: DateTime.now().toUtc(),
     projectPath: projectPath,
+    aggregation: aggregation,
   );
 }

@@ -5,6 +5,7 @@ export 'src/cli/runner.dart';
 export 'src/core/scanner.dart';
 export 'src/core/config.dart';
 export 'src/core/index.dart';
+export 'src/model/category_aggregation.dart';
 export 'src/model/finding.dart';
 export 'src/model/rule_result.dart';
 export 'src/model/scan_report.dart';
