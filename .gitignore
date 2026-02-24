@@ -1,0 +1,26 @@
+# Dart
+.dart_tool/
+.pub-cache/
+.pub/
+build/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage / test
+coverage/
+*.lcov
+
+# Misc
+*.log
+*.swp
+*~

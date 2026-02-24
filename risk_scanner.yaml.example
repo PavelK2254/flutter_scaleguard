@@ -1,0 +1,22 @@
+# Optional: copy to risk_scanner.yaml in your project root to override defaults.
+# All keys are optional.
+
+# feature_roots:
+#   - lib/features
+
+# god_file_medium_loc: 500
+# god_file_high_loc: 900
+
+# ignored_patterns:
+#   - .g.dart
+#   - .freezed.dart
+#   - .gen.dart
+#   - /build/
+
+# shared_path_segments:
+#   - shared
+#   - common
+
+# route_constant_prefixes:
+#   - Routes.
+#   - AppRoutes.
