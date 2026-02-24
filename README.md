@@ -1,30 +1,30 @@
-# Flutter Architecture Risk Scanner
+# ScaleGuard
 
 A deterministic CLI that evaluates architectural scale risk in Flutter projects using a weighted scoring model. This is **not** a linter or generic static analyzer—it applies rule-based architecture checks only.
 
 ## Install
 
 ```bash
-dart pub global activate flutter_arch_risk
+dart pub global activate scale_guard
 # or from this repo:
-cd flutter_arch_risk && dart pub get
+cd scale_guard && dart pub get
 ```
 
 ## Usage
 
 ```bash
 # Scan a project (default: console report)
-flutter_arch_risk scan /path/to/flutter_project
+scale_guard scan /path/to/flutter_project
 
 # JSON report
-flutter_arch_risk scan /path/to/flutter_project --json
+scale_guard scan /path/to/flutter_project --json
 ```
 
 Or run directly:
 
 ```bash
-dart run bin/flutter_arch_risk.dart scan .
-dart run bin/flutter_arch_risk.dart scan . --json
+dart run bin/scale_guard.dart scan .
+dart run bin/scale_guard.dart scan . --json
 ```
 
 ## Output

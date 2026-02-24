@@ -10,7 +10,7 @@ Future<int> runCli(List<String> arguments) async {
   final json = arguments.contains('--json');
   final args = arguments.where((a) => a != '--json').toList();
   if (args.length < 2 || args[0] != 'scan') {
-    print('Usage: flutter_arch_risk scan <project_path> [--json]');
+    print('Usage: scale_guard scan <project_path> [--json]');
     return 64;
   }
   final projectPath = args[1];

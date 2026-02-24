@@ -1,7 +1,7 @@
-name: flutter_arch_risk
-description: Deterministic architecture scale risk scanner for Flutter projects.
+name: scale_guard
+description: ScaleGuard — deterministic architecture scale risk scanner for Flutter projects.
 version: 0.1.0
-repository: https://github.com/yourusername/flutter_arch_risk
+repository: https://github.com/yourusername/scale_guard
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -14,4 +14,4 @@ dev_dependencies:
   test: ^1.24.0
 
 executables:
-  flutter_arch_risk:
+  scale_guard:

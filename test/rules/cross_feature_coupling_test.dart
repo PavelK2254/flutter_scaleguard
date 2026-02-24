@@ -1,4 +1,4 @@
-import 'package:flutter_arch_risk/flutter_arch_risk.dart';
+import 'package:scale_guard/scale_guard.dart';
 import 'package:test/test.dart';
 
 void main() {

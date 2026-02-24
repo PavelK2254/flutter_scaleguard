@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_arch_risk/flutter_arch_risk.dart';
+import 'package:scale_guard/scale_guard.dart';
 
 void main(List<String> arguments) async {
   exit(await runCli(arguments));

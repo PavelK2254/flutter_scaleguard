@@ -1,4 +1,4 @@
-library flutter_arch_risk;
+library scale_guard;
 
 // Public API
 export 'src/cli/runner.dart';
