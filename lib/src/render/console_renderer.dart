@@ -4,13 +4,17 @@ import '../model/finding.dart';
 import '../model/risk_level.dart';
 import '../model/scan_report.dart';
 import '../model/severity.dart';
+import '../version.dart';
 
 class ConsoleRenderer {
   ConsoleRenderer._();
 
-  static void render(ScanReport report) {
-    const version = 'v0.1';
-    print('Flutter ScaleGuard $version');
+  /// Renders [report] to the console. [version] should come from [getPackageVersion]
+  /// so the banner matches pubspec; if null, uses [fallbackPackageVersion].
+  static void render(ScanReport report, {String? version}) {
+    final v = version ?? fallbackPackageVersion;
+    final versionLabel = v.startsWith('v') ? v : 'v$v';
+    print('Flutter ScaleGuard $versionLabel');
     print('Project: ${report.projectPath ?? '<unknown>'}');
     print('');
     print('Architecture Score: ${report.score}/100');

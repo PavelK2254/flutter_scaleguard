@@ -4,6 +4,7 @@ import '../core/scanner.dart';
 import '../model/risk_level.dart';
 import '../render/console_renderer.dart';
 import '../render/json_renderer.dart';
+import '../version.dart';
 
 /// Runs the CLI with [arguments]. Returns exit code: 0 for Low/Medium, 1 for High.
 Future<int> runCli(List<String> arguments) async {
@@ -28,7 +29,8 @@ Future<int> _runScan(String projectPath, bool jsonOutput) async {
   if (jsonOutput) {
     print(JsonRenderer.render(report));
   } else {
-    ConsoleRenderer.render(report);
+    final version = await getPackageVersion();
+    ConsoleRenderer.render(report, version: version);
   }
   return report.riskLevel == RiskLevel.high ? 1 : 0;
 }
