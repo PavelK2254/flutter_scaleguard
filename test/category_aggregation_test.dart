@@ -42,7 +42,8 @@ void main() {
           ],
         ),
       ];
-      final agg = CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+      final agg =
+          CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
       expect(agg.totalPenalty, 10.0);
       expect(agg.categoryScores.length, 1);
       expect(agg.categoryScores.first.category, 'Structural Risk');
@@ -60,7 +61,8 @@ void main() {
         RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
       ];
-      final agg = CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+      final agg =
+          CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
       expect(agg.totalPenalty, 25.0);
       expect(agg.categoryScores.length, 3);
       expect(agg.categoryScores[0].totalPenalty, 10.0);
@@ -76,7 +78,8 @@ void main() {
         RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
       ];
-      final agg = CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+      final agg =
+          CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
       expect(agg.categoryScores.length, 2);
       expect(agg.dominantCategory, 'Coupling Risk');
     });
@@ -96,7 +99,8 @@ void main() {
       final results = [
         RuleResult(ruleId: 'unknown_rule', penalty: 3, findings: []),
       ];
-      final agg = CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+      final agg =
+          CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
       expect(agg.categoryScores.length, 1);
       expect(agg.categoryScores.first.category, 'unknown_rule');
       expect(agg.dominantCategory, 'unknown_rule');

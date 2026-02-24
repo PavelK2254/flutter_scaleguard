@@ -19,7 +19,8 @@ Future<int> runCli(List<String> arguments) async {
 
 Future<int> _runScan(String projectPath, bool jsonOutput) async {
   final dir = Directory(projectPath);
-  if (!await dir.exists() || !await dir.stat().then((s) => s.type == FileSystemEntityType.directory)) {
+  if (!await dir.exists() ||
+      !await dir.stat().then((s) => s.type == FileSystemEntityType.directory)) {
     print('Error: project path not found or not a directory: $projectPath');
     return 1;
   }

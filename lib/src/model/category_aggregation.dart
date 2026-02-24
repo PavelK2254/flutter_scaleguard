@@ -86,9 +86,8 @@ class CategoryAggregation {
       return a.category.compareTo(b.category);
     });
 
-    final dominantCategory = categoryScores.isNotEmpty
-        ? categoryScores.first.category
-        : '';
+    final dominantCategory =
+        categoryScores.isNotEmpty ? categoryScores.first.category : '';
 
     final sortedByRule = List<RuleResult>.from(results)
       ..sort((a, b) {

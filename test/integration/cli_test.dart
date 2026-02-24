@@ -15,8 +15,16 @@ void main() {
     });
 
     test('ScanReport findings are sorted by severity then file then line', () {
-      final high = Finding(severity: FindingSeverity.high, ruleId: 'r', file: 'a.dart', message: 'm');
-      final medium = Finding(severity: FindingSeverity.medium, ruleId: 'r', file: 'b.dart', message: 'm');
+      final high = Finding(
+          severity: FindingSeverity.high,
+          ruleId: 'r',
+          file: 'a.dart',
+          message: 'm');
+      final medium = Finding(
+          severity: FindingSeverity.medium,
+          ruleId: 'r',
+          file: 'b.dart',
+          message: 'm');
       final report = ScanReport(
         score: 80,
         riskLevel: RiskLevel.low,

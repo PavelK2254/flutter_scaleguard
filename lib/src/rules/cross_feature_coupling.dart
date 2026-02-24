@@ -38,14 +38,16 @@ class CrossFeatureCouplingRule implements Rule {
             severity: FindingSeverity.high,
             ruleId: id,
             file: file.path,
-            message: 'Cross-feature import: $path imports $importTarget (feature $toFeature)',
+            message:
+                'Cross-feature import: $path imports $importTarget (feature $toFeature)',
           ));
         }
       }
     }
     final riskValue = findings.length.toDouble();
     final penalty = (riskValue * weight).clamp(0.0, cap);
-    return RuleResult(ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
+    return RuleResult(
+        ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
   static String _normalize(String p) => p.replaceAll('\\', '/');
@@ -56,7 +58,9 @@ class CrossFeatureCouplingRule implements Rule {
       final r = root.endsWith('/') ? root : '$root/';
       if (norm.startsWith(r)) {
         final after = norm.substring(r.length);
-        final segment = after.contains('/') ? after.substring(0, after.indexOf('/')) : after;
+        final segment = after.contains('/')
+            ? after.substring(0, after.indexOf('/'))
+            : after;
         return segment.isNotEmpty ? segment : null;
       }
     }

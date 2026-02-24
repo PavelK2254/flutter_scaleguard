@@ -33,7 +33,10 @@ void main() {
           IndexedFile(
             path: 'lib/features/auth/presentation/page.dart',
             lineCount: 10,
-            imports: ['lib/features/auth/domain/user.dart', 'lib/features/settings/domain/prefs.dart'],
+            imports: [
+              'lib/features/auth/domain/user.dart',
+              'lib/features/settings/domain/prefs.dart'
+            ],
             lines: [],
           ),
         ],
@@ -41,7 +44,8 @@ void main() {
       final result = rule.run(index, config);
       expect(result.findings.length, 1);
       expect(result.findings.first.ruleId, 'cross_feature_coupling');
-      expect(result.findings.first.file, 'lib/features/auth/presentation/page.dart');
+      expect(result.findings.first.file,
+          'lib/features/auth/presentation/page.dart');
       expect(result.findings.first.message, contains('settings'));
       expect(result.penalty, greaterThan(0));
     });

@@ -19,8 +19,8 @@ class ConsoleRenderer {
 
     final agg = report.aggregation;
     if (agg != null) {
-      final summary =
-          categoryToSummary[agg.dominantCategory] ?? 'No dominant risk category.';
+      final summary = categoryToSummary[agg.dominantCategory] ??
+          'No dominant risk category.';
       print('Summary:');
       print(summary);
       print('');
@@ -33,8 +33,8 @@ class ConsoleRenderer {
           : 0;
       print(
           'Dominant Risk Category: ${agg.dominantCategory} ($pct% of total penalty)');
-      final displayName =
-          ruleIdToDisplayLabel[agg.mostExpensiveRuleId] ?? agg.mostExpensiveRuleId;
+      final displayName = ruleIdToDisplayLabel[agg.mostExpensiveRuleId] ??
+          agg.mostExpensiveRuleId;
       print('Most Expensive Risk: $displayName (-${agg.mostExpensivePenalty})');
       print('');
       print('---');
@@ -53,9 +53,8 @@ class ConsoleRenderer {
       if (findings.isEmpty) {
         print('No findings.');
       } else {
-        final high = findings
-            .where((f) => f.severity == FindingSeverity.high)
-            .toList();
+        final high =
+            findings.where((f) => f.severity == FindingSeverity.high).toList();
         final medium = findings
             .where((f) => f.severity == FindingSeverity.medium)
             .toList();
@@ -104,7 +103,9 @@ class ConsoleRenderer {
     final countByKey = <String, int>{};
     for (final f in findings) {
       final segments = f.file.split('/');
-      final key = segments.length >= 2 ? '${segments[0]}/${segments[1]}' : (segments.isNotEmpty ? segments[0] : 'lib');
+      final key = segments.length >= 2
+          ? '${segments[0]}/${segments[1]}'
+          : (segments.isNotEmpty ? segments[0] : 'lib');
       countByKey[key] = (countByKey[key] ?? 0) + 1;
     }
     final entries = countByKey.entries.toList()

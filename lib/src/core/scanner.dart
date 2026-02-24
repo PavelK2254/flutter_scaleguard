@@ -20,26 +20,30 @@ final _importRegex = RegExp(r'''import\s+['"]([^'"]+)['"]''');
 final _exportRegex = RegExp(r'''export\s+['"]([^'"]+)['"]''');
 
 /// Builds [ProjectIndex] from a project directory.
-Future<ProjectIndex> buildIndex(String projectPath, ScannerConfig config, {bool includeLines = true}) async {
+Future<ProjectIndex> buildIndex(String projectPath, ScannerConfig config,
+    {bool includeLines = true}) async {
   final libDir = Directory('$projectPath/lib');
   if (!await libDir.exists()) {
     return const ProjectIndex(files: []);
   }
   final packageName = await _readPackageName(projectPath);
   final files = <IndexedFile>[];
-  final root = projectPath.replaceAll('\\', '/').replaceFirst(RegExp(r'/$'), '');
+  final root =
+      projectPath.replaceAll('\\', '/').replaceFirst(RegExp(r'/$'), '');
   await for (final entity in libDir.list(recursive: true, followLinks: false)) {
     if (entity is! File) continue;
     final path = entity.path.replaceAll('\\', '/');
     if (!path.endsWith('.dart')) continue;
-    String relative = path.startsWith(root) ? path.substring(root.length) : path;
+    String relative =
+        path.startsWith(root) ? path.substring(root.length) : path;
     if (relative.startsWith('/')) relative = relative.substring(1);
     if (config.shouldIgnore(relative)) continue;
     final content = await entity.readAsString();
     final lineCount = content.split('\n').length;
     final lines = includeLines ? content.split('\n') : <String>[];
     final imports = _parseImports(content, relative, packageName);
-    files.add(IndexedFile(path: relative, lineCount: lineCount, imports: imports, lines: lines));
+    files.add(IndexedFile(
+        path: relative, lineCount: lineCount, imports: imports, lines: lines));
   }
   return ProjectIndex(files: files, packageName: packageName);
 }
@@ -52,7 +56,8 @@ Future<String?> _readPackageName(String projectPath) async {
   return match?.group(1);
 }
 
-List<String> _parseImports(String content, String fromPath, String? packageName) {
+List<String> _parseImports(
+    String content, String fromPath, String? packageName) {
   final result = <String>[];
   for (final line in content.split('\n')) {
     final trimmed = line.trim();
@@ -61,7 +66,8 @@ List<String> _parseImports(String content, String fromPath, String? packageName)
       final m = re.firstMatch(trimmed);
       if (m != null) {
         final target = m.group(1)!;
-        final resolved = ProjectIndex.resolveImportPath(fromPath, target, packageName);
+        final resolved =
+            ProjectIndex.resolveImportPath(fromPath, target, packageName);
         if (resolved != null && resolved.isNotEmpty) result.add(resolved);
         break;
       }
@@ -82,7 +88,8 @@ List<Rule> get defaultRules => [
     ];
 
 /// Runs a full scan: loads config, builds index, runs [rules], computes score, returns report.
-Future<ScanReport> runScan(String projectPath, {ScannerConfig? config, List<Rule>? rules}) async {
+Future<ScanReport> runScan(String projectPath,
+    {ScannerConfig? config, List<Rule>? rules}) async {
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
   final index = await buildIndex(projectPath, resolvedConfig);
   final ruleList = rules ?? defaultRules;
