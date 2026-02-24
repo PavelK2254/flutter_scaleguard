@@ -1,6 +1,44 @@
 # ScaleGuard
 
-A deterministic CLI that evaluates architectural scale risk in Flutter projects using a weighted scoring model. This is **not** a linter or generic static analyzer—it applies rule-based architecture checks only.
+Flutter projects rarely fail because of missing features.  
+They fail because early architectural shortcuts quietly compound into structural risk.
+
+**Flutter ScaleGuard** is an opinionated, deterministic architecture risk scanner for Flutter teams preparing to scale.
+
+It does not lint style.  
+It does not measure cosmetic complexity.  
+It evaluates structural decisions that increase long-term refactor cost, coupling, and growth friction.
+
+ScaleGuard helps you understand:
+
+- Is your architecture still scalable?
+- Are feature boundaries leaking?
+- Are layers crossing in ways that will hurt velocity later?
+- Are you accumulating hidden structural debt?
+
+Before your team grows.  
+Before the codebase doubles.  
+Before refactors become expensive.
+
+## Example Output
+```
+Flutter ScaleGuard v0.1
+
+Architecture Score: 57/100
+Risk Level: Medium
+
+Primary Structural Risks:
+
+Cross Feature Coupling (12 findings)
+
+Layer Violations (5 findings)
+
+Most Expensive Risk:
+Cross Feature Coupling (-18 points)
+
+Suggested Direction:
+Isolate feature boundaries and enforce layer abstractions.
+```
 
 ## Install
 
