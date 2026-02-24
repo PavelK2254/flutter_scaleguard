@@ -16,7 +16,8 @@ class NavigationCouplingRule implements Rule {
   @override
   double get cap => 5;
 
-  static final _pushNamedRegex = RegExp(r'''pushNamed\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]''');
+  static final _pushNamedRegex =
+      RegExp(r'''pushNamed\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]''');
 
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
@@ -43,7 +44,8 @@ class NavigationCouplingRule implements Rule {
     }
     final riskValue = findings.length.toDouble();
     final penalty = (riskValue * weight).clamp(0.0, cap);
-    return RuleResult(ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
+    return RuleResult(
+        ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
   bool _isAllowedConstant(String line, String route, ScannerConfig config) {

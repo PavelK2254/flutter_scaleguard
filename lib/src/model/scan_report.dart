@@ -1,3 +1,4 @@
+import 'category_aggregation.dart';
 import 'finding.dart';
 import 'risk_level.dart';
 import 'rule_result.dart';
@@ -9,6 +10,7 @@ class ScanReport {
     required this.ruleResults,
     required this.timestamp,
     this.projectPath,
+    this.aggregation,
   });
 
   final int score;
@@ -16,6 +18,7 @@ class ScanReport {
   final List<RuleResult> ruleResults;
   final DateTime timestamp;
   final String? projectPath;
+  final CategoryAggregation? aggregation;
 
   List<Finding> get findings {
     final list = <Finding>[];

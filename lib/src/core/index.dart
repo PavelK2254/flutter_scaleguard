@@ -38,7 +38,8 @@ class ProjectIndex {
 
   /// Resolve relative import [target] from [fromPath] to a path under lib.
   /// Returns null if target is package: or not under lib.
-  static String? resolveImportPath(String fromPath, String target, String? packageName) {
+  static String? resolveImportPath(
+      String fromPath, String target, String? packageName) {
     final from = normalizePath(fromPath);
     if (target.startsWith('package:')) {
       if (packageName == null) return null;
@@ -50,7 +51,8 @@ class ProjectIndex {
       return 'lib/$path';
     }
     if (target.startsWith('dart:')) return null;
-    final fromDir = from.contains('/') ? from.substring(0, from.lastIndexOf('/') + 1) : '';
+    final fromDir =
+        from.contains('/') ? from.substring(0, from.lastIndexOf('/') + 1) : '';
     final combined = fromDir + target;
     final parts = combined.split('/');
     final resolved = <String>[];

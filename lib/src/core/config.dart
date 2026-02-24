@@ -104,9 +104,12 @@ class ScannerConfig {
 
     final featureRoots = list('feature_roots', [defaultFeatureRoot]);
     final ignoredPatterns = list('ignored_patterns', defaultIgnoredPatterns);
-    final sharedPathSegments = list('shared_path_segments', defaultSharedPathSegments);
-    final godFileMediumLoc = (yaml['god_file_medium_loc'] as int?) ?? defaultGodFileMediumLoc;
-    final godFileHighLoc = (yaml['god_file_high_loc'] as int?) ?? defaultGodFileHighLoc;
+    final sharedPathSegments =
+        list('shared_path_segments', defaultSharedPathSegments);
+    final godFileMediumLoc =
+        (yaml['god_file_medium_loc'] as int?) ?? defaultGodFileMediumLoc;
+    final godFileHighLoc =
+        (yaml['god_file_high_loc'] as int?) ?? defaultGodFileHighLoc;
 
     Map<String, String> layerMappings = defaultLayerMappings;
     final lm = yaml['layer_mappings'];
@@ -116,7 +119,8 @@ class ScannerConfig {
       );
     }
 
-    Map<String, Set<String>> allowedLayerDependencies = defaultAllowedLayerDependencies;
+    Map<String, Set<String>> allowedLayerDependencies =
+        defaultAllowedLayerDependencies;
     final ald = yaml['allowed_layer_dependencies'];
     if (ald is YamlMap) {
       allowedLayerDependencies = {};
@@ -139,8 +143,10 @@ class ScannerConfig {
       'getIt.',
       'GetIt().',
     ]);
-    final routeConstantPrefixes = list('route_constant_prefixes', const ['Routes.', 'AppRoutes.']);
-    final hardcodedUrlPatterns = list('hardcoded_url_patterns', const ['http://', 'https://', 'www.']);
+    final routeConstantPrefixes =
+        list('route_constant_prefixes', const ['Routes.', 'AppRoutes.']);
+    final hardcodedUrlPatterns =
+        list('hardcoded_url_patterns', const ['http://', 'https://', 'www.']);
 
     return ScannerConfig(
       featureRoots: featureRoots,

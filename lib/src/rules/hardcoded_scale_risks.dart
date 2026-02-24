@@ -21,7 +21,8 @@ class HardcodedScaleRisksRule implements Rule {
     final findings = <Finding>[];
     final pathToLayer = <String, String?>{};
     for (final f in index.files) {
-      pathToLayer[f.path] = _layerFromPath(ProjectIndex.normalizePath(f.path), config);
+      pathToLayer[f.path] =
+          _layerFromPath(ProjectIndex.normalizePath(f.path), config);
     }
     for (final file in index.files) {
       final layer = pathToLayer[file.path];
@@ -46,7 +47,8 @@ class HardcodedScaleRisksRule implements Rule {
     }
     final riskValue = findings.length.toDouble();
     final penalty = (riskValue * weight).clamp(0.0, cap);
-    return RuleResult(ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
+    return RuleResult(
+        ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
   static String? _layerFromPath(String path, ScannerConfig config) {

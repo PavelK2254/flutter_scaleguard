@@ -37,14 +37,16 @@ class SharedBoundaryLeakageRule implements Rule {
             severity: FindingSeverity.high,
             ruleId: id,
             file: file.path,
-            message: 'Shared boundary leakage: $path imports feature $importTarget',
+            message:
+                'Shared boundary leakage: $path imports feature $importTarget',
           ));
         }
       }
     }
     final riskValue = findings.length.toDouble();
     final penalty = (riskValue * weight).clamp(0.0, cap);
-    return RuleResult(ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
+    return RuleResult(
+        ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
   static String _normalize(String p) => p.replaceAll('\\', '/');

@@ -37,7 +37,8 @@ class LayerViolationsRule implements Rule {
             severity: severity,
             ruleId: id,
             file: file.path,
-            message: 'Layer violation: $fromLayer must not import $toLayer ($importTarget)',
+            message:
+                'Layer violation: $fromLayer must not import $toLayer ($importTarget)',
           ));
         }
       }
@@ -47,7 +48,8 @@ class LayerViolationsRule implements Rule {
       riskValue += f.severity == FindingSeverity.high ? 2 : 1;
     }
     final penalty = (riskValue * weight).clamp(0.0, cap);
-    return RuleResult(ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
+    return RuleResult(
+        ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
   static String? _layerFromPath(String path, ScannerConfig config) {

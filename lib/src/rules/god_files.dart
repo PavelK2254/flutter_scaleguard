@@ -26,7 +26,8 @@ class GodFilesRule implements Rule {
           severity: FindingSeverity.high,
           ruleId: id,
           file: file.path,
-          message: 'God file: ${file.lineCount} LOC (threshold ${config.godFileHighLoc})',
+          message:
+              'God file: ${file.lineCount} LOC (threshold ${config.godFileHighLoc})',
         ));
         riskValue += 2;
       } else if (file.lineCount >= config.godFileMediumLoc) {
@@ -34,12 +35,14 @@ class GodFilesRule implements Rule {
           severity: FindingSeverity.medium,
           ruleId: id,
           file: file.path,
-          message: 'Large file: ${file.lineCount} LOC (threshold ${config.godFileMediumLoc})',
+          message:
+              'Large file: ${file.lineCount} LOC (threshold ${config.godFileMediumLoc})',
         ));
         riskValue += 1;
       }
     }
     final penalty = (riskValue * weight).clamp(0.0, cap);
-    return RuleResult(ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
+    return RuleResult(
+        ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 }
