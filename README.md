@@ -75,4 +75,4 @@ Scoring: start at 100; each rule contributes a penalty `min(cap, weight * risk_v
 
 ## License
 
-MIT.
+Apache License 2.0. See [LICENSE](LICENSE) for the full text.
