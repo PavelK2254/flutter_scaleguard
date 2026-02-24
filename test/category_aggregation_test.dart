@@ -21,6 +21,20 @@ void main() {
       expect(agg.mostExpensivePenalty, 0.0);
     });
 
+    test('all zero penalty yields empty aggregation (no risk signal)', () {
+      final results = [
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+        RuleResult(ruleId: 'god_files', penalty: 0, findings: []),
+      ];
+      final agg =
+          CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+      expect(agg.totalPenalty, 0.0);
+      expect(agg.categoryScores, isEmpty);
+      expect(agg.dominantCategory, '');
+      expect(agg.mostExpensiveRuleId, '');
+      expect(agg.mostExpensivePenalty, 0.0);
+    });
+
     test('single rule aggregates to one category', () {
       final results = [
         RuleResult(

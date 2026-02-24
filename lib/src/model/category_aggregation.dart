@@ -86,9 +86,10 @@ class CategoryAggregation {
       return a.category.compareTo(b.category);
     });
 
+    // No penalty => no risk signal: avoid surfacing a fake dominant/expensive.
+    final hasRisk = totalPenalty > 0;
     final dominantCategory =
-        categoryScores.isNotEmpty ? categoryScores.first.category : '';
-
+        hasRisk && categoryScores.isNotEmpty ? categoryScores.first.category : '';
     final sortedByRule = List<RuleResult>.from(results)
       ..sort((a, b) {
         final byPenalty = b.penalty.compareTo(a.penalty);
@@ -96,12 +97,13 @@ class CategoryAggregation {
         return a.ruleId.compareTo(b.ruleId);
       });
     final mostExpensiveRuleId =
-        sortedByRule.isNotEmpty ? sortedByRule.first.ruleId : '';
+        hasRisk && sortedByRule.isNotEmpty ? sortedByRule.first.ruleId : '';
     final mostExpensivePenalty =
-        sortedByRule.isNotEmpty ? sortedByRule.first.penalty : 0.0;
+        hasRisk && sortedByRule.isNotEmpty ? sortedByRule.first.penalty : 0.0;
+    final effectiveScores = hasRisk ? categoryScores : <CategoryScore>[];
 
     return CategoryAggregation(
-      categoryScores: categoryScores,
+      categoryScores: effectiveScores,
       dominantCategory: dominantCategory,
       mostExpensiveRuleId: mostExpensiveRuleId,
       mostExpensivePenalty: mostExpensivePenalty,
