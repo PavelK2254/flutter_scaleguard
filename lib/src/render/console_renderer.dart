@@ -43,8 +43,31 @@ class ConsoleRenderer {
           ruleIdToCategory[agg.mostExpensiveRuleId] ?? agg.mostExpensiveRuleId;
       print(
           'Most Expensive Risk: $displayName (-${agg.mostExpensivePenalty}) [$mostExpCategory] [rule: ${agg.mostExpensiveRuleId}]');
-      _printMostExpensiveHotspot(report, agg.mostExpensiveRuleId);
-      _printMostExpensiveExamples(report, agg.mostExpensiveRuleId);
+      final ruleId = agg.mostExpensiveRuleId;
+      final forRule = report.uniqueFindings
+          .where((f) => f.ruleId == ruleId)
+          .toList();
+      (String, int)? sourceTop;
+      (String, int)? targetTop;
+      if (forRule.isNotEmpty) {
+        final sourceCountByKey = <String, int>{};
+        final targetCountByKey = <String, int>{};
+        for (final f in forRule) {
+          final sk = getSourceHotspotKey(f);
+          sourceCountByKey[sk] = (sourceCountByKey[sk] ?? 0) + 1;
+          final tk = getTargetHotspotKey(f);
+          if (tk != null && tk.isNotEmpty) {
+            targetCountByKey[tk] = (targetCountByKey[tk] ?? 0) + 1;
+          }
+        }
+        sourceTop = _topHotspotEntry(sourceCountByKey);
+        targetTop = targetCountByKey.isNotEmpty
+            ? _topHotspotEntry(targetCountByKey)
+            : null;
+      }
+      _printMostExpensiveHotspot(report, ruleId, sourceTop, targetTop);
+      _printMostExpensiveExamples(
+          report, ruleId, topSourceHotspotKey: sourceTop?.$1);
       print('');
       print('---');
       print('');
@@ -96,32 +119,17 @@ class ConsoleRenderer {
     return '${s.substring(0, prefixLen)}...$suffix';
   }
 
-  static void _printMostExpensiveHotspot(ScanReport report, String ruleId) {
-    final forRule = report.uniqueFindings
-        .where((f) => f.ruleId == ruleId)
-        .toList();
-    if (forRule.isEmpty) return;
-    final sourceCountByKey = <String, int>{};
-    final targetCountByKey = <String, int>{};
-    var hasTarget = false;
-    for (final f in forRule) {
-      final sk = getSourceHotspotKey(f);
-      sourceCountByKey[sk] = (sourceCountByKey[sk] ?? 0) + 1;
-      final tk = getTargetHotspotKey(f);
-      if (tk != null && tk.isNotEmpty) {
-        hasTarget = true;
-        targetCountByKey[tk] = (targetCountByKey[tk] ?? 0) + 1;
-      }
-    }
-    final sourceTop = _topHotspotEntry(sourceCountByKey);
+  static void _printMostExpensiveHotspot(
+    ScanReport report,
+    String ruleId,
+    (String, int)? sourceTop,
+    (String, int)? targetTop,
+  ) {
     if (sourceTop != null) {
       print('Hotspot (source): ${sourceTop.$1} (${sourceTop.$2} findings)');
     }
-    if (hasTarget && targetCountByKey.isNotEmpty) {
-      final targetTop = _topHotspotEntry(targetCountByKey);
-      if (targetTop != null) {
-        print('Hotspot (target): ${targetTop.$1} (${targetTop.$2} findings)');
-      }
+    if (targetTop != null) {
+      print('Hotspot (target): ${targetTop.$1} (${targetTop.$2} findings)');
     }
   }
 
@@ -138,7 +146,11 @@ class ConsoleRenderer {
     return (e.key, e.value);
   }
 
-  static void _printMostExpensiveExamples(ScanReport report, String ruleId) {
+  static void _printMostExpensiveExamples(
+    ScanReport report,
+    String ruleId, {
+    String? topSourceHotspotKey,
+  }) {
     final forRule = report.uniqueFindings
         .where((f) => f.ruleId == ruleId)
         .toList();
@@ -146,7 +158,7 @@ class ConsoleRenderer {
     forRule.sort((a, b) {
       final sev = b.severity.index.compareTo(a.severity.index);
       if (sev != 0) return sev;
-      final file = a.file.compareTo(b.file);
+      final file = _normPath(a.file).compareTo(_normPath(b.file));
       if (file != 0) return file;
       final al = a.line ?? 0;
       final bl = b.line ?? 0;
@@ -158,10 +170,31 @@ class ConsoleRenderer {
     });
     final seenFiles = <String>{};
     final examples = <Finding>[];
-    for (final f in forRule) {
-      if (seenFiles.add(f.file)) {
-        examples.add(f);
-        if (examples.length >= 3) break;
+    if (topSourceHotspotKey != null) {
+      final matching =
+          forRule.where((f) => getSourceHotspotKey(f) == topSourceHotspotKey);
+      final rest =
+          forRule.where((f) => getSourceHotspotKey(f) != topSourceHotspotKey);
+      for (final f in matching) {
+        if (seenFiles.add(f.file)) {
+          examples.add(f);
+          if (examples.length >= 3) break;
+        }
+      }
+      if (examples.length < 3) {
+        for (final f in rest) {
+          if (seenFiles.add(f.file)) {
+            examples.add(f);
+            if (examples.length >= 3) break;
+          }
+        }
+      }
+    } else {
+      for (final f in forRule) {
+        if (seenFiles.add(f.file)) {
+          examples.add(f);
+          if (examples.length >= 3) break;
+        }
       }
     }
     print('Examples:');
@@ -196,6 +229,11 @@ class ConsoleRenderer {
     }
     final more = forRule.length - examples.length;
     if (more > 0) print('  (+$more more)');
+    if (topSourceHotspotKey != null &&
+        examples.any((f) => getSourceHotspotKey(f) != topSourceHotspotKey)) {
+      print(
+          '(Note: hotspot/example mismatch detected — verify feature extraction)');
+    }
   }
 
   static void _printFindingsByCategory(
@@ -260,9 +298,14 @@ class ConsoleRenderer {
     return segments.isNotEmpty && segments[0] == 'lib' ? 'lib' : 'other';
   }
 
+  /// Normalize path separators for deterministic comparison and extraction.
+  static String _normPath(String p) => p.replaceAll(r'\', '/');
+
   /// Source hotspot key: extract from [Finding.file] only (no imported path or message).
+  /// Uses normalized path so keys are deterministic across platforms.
   static String getSourceHotspotKey(Finding f) {
-    return extractFeaturePathFromFilePath(f.file) ?? _fallbackKey(f.file);
+    final norm = _normPath(f.file);
+    return extractFeaturePathFromFilePath(norm) ?? _fallbackKey(norm);
   }
 
   /// Target hotspot key from [Finding.resolvedImportedPath]. Returns null if none.
@@ -280,10 +323,12 @@ class ConsoleRenderer {
       return;
     }
     final countByKey = <String, int>{};
+    final ruleCountByKey = <String, Map<String, int>>{};
     for (final f in findings) {
-      final key =
-          extractFeaturePathFromFilePath(f.file) ?? _fallbackKey(f.file);
+      final key = getSourceHotspotKey(f);
       countByKey[key] = (countByKey[key] ?? 0) + 1;
+      ruleCountByKey[key] ??= {};
+      ruleCountByKey[key]![f.ruleId] = (ruleCountByKey[key]![f.ruleId] ?? 0) + 1;
     }
     final entries = countByKey.entries.toList()
       ..sort((a, b) {
@@ -293,7 +338,18 @@ class ConsoleRenderer {
       });
     final top3 = entries.take(3).toList();
     for (final e in top3) {
-      print('${e.key} (${e.value} findings)');
+      final ruleCounts = ruleCountByKey[e.key]!;
+      final topRules = ruleCounts.entries.toList()
+        ..sort((a, b) {
+          final byCount = b.value.compareTo(a.value);
+          if (byCount != 0) return byCount;
+          return a.key.compareTo(b.key);
+        });
+      final top2 = topRules.take(2).toList();
+      final rulePart = top2.isEmpty
+          ? ''
+          : ' — ${top2.map((r) => '${r.key}: ${r.value}').join(', ')}';
+      print('${e.key} (${e.value} findings)$rulePart');
     }
   }
 
