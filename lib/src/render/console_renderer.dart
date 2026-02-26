@@ -39,7 +39,12 @@ class ConsoleRenderer {
           'Dominant Risk Category: ${agg.dominantCategory} ($pct% of total penalty)');
       final displayName = ruleIdToDisplayLabel[agg.mostExpensiveRuleId] ??
           agg.mostExpensiveRuleId;
-      print('Most Expensive Risk: $displayName (-${agg.mostExpensivePenalty})');
+      final mostExpCategory =
+          ruleIdToCategory[agg.mostExpensiveRuleId] ?? agg.mostExpensiveRuleId;
+      print(
+          'Most Expensive Risk: $displayName (-${agg.mostExpensivePenalty}) [$mostExpCategory] [rule: ${agg.mostExpensiveRuleId}]');
+      _printMostExpensiveHotspot(report, agg.mostExpensiveRuleId);
+      _printMostExpensiveExamples(report, agg.mostExpensiveRuleId);
       print('');
       print('---');
       print('');
@@ -76,6 +81,123 @@ class ConsoleRenderer {
     }
   }
 
+  static const int _maxEvidenceLength = 80;
+  static const int _maxPathLength = 56;
+
+  /// Middle truncation that preserves the full last path segment (filename).
+  /// If s.length <= maxLen returns s. Otherwise returns prefix + '...' + suffix
+  /// where suffix is from the last '/' to end (or whole s if no '/').
+  static String _truncateMiddle(String s, int maxLen) {
+    if (s.length <= maxLen) return s;
+    final lastSlash = s.lastIndexOf('/');
+    final suffix = lastSlash < 0 ? s : s.substring(lastSlash);
+    final prefixLen = maxLen - 3 - suffix.length;
+    if (prefixLen <= 0) return '...$suffix';
+    return '${s.substring(0, prefixLen)}...$suffix';
+  }
+
+  static void _printMostExpensiveHotspot(ScanReport report, String ruleId) {
+    final forRule = report.uniqueFindings
+        .where((f) => f.ruleId == ruleId)
+        .toList();
+    if (forRule.isEmpty) return;
+    final sourceCountByKey = <String, int>{};
+    final targetCountByKey = <String, int>{};
+    var hasTarget = false;
+    for (final f in forRule) {
+      final sk = getSourceHotspotKey(f);
+      sourceCountByKey[sk] = (sourceCountByKey[sk] ?? 0) + 1;
+      final tk = getTargetHotspotKey(f);
+      if (tk != null && tk.isNotEmpty) {
+        hasTarget = true;
+        targetCountByKey[tk] = (targetCountByKey[tk] ?? 0) + 1;
+      }
+    }
+    final sourceTop = _topHotspotEntry(sourceCountByKey);
+    if (sourceTop != null) {
+      print('Hotspot (source): ${sourceTop.$1} (${sourceTop.$2} findings)');
+    }
+    if (hasTarget && targetCountByKey.isNotEmpty) {
+      final targetTop = _topHotspotEntry(targetCountByKey);
+      if (targetTop != null) {
+        print('Hotspot (target): ${targetTop.$1} (${targetTop.$2} findings)');
+      }
+    }
+  }
+
+  /// Top entry by count desc then key asc. Returns (key, count) or null if empty.
+  static (String, int)? _topHotspotEntry(Map<String, int> countByKey) {
+    if (countByKey.isEmpty) return null;
+    final entries = countByKey.entries.toList()
+      ..sort((a, b) {
+        final byCount = b.value.compareTo(a.value);
+        if (byCount != 0) return byCount;
+        return a.key.compareTo(b.key);
+      });
+    final e = entries.first;
+    return (e.key, e.value);
+  }
+
+  static void _printMostExpensiveExamples(ScanReport report, String ruleId) {
+    final forRule = report.uniqueFindings
+        .where((f) => f.ruleId == ruleId)
+        .toList();
+    if (forRule.isEmpty) return;
+    forRule.sort((a, b) {
+      final sev = b.severity.index.compareTo(a.severity.index);
+      if (sev != 0) return sev;
+      final file = a.file.compareTo(b.file);
+      if (file != 0) return file;
+      final al = a.line ?? 0;
+      final bl = b.line ?? 0;
+      final lineCmp = al.compareTo(bl);
+      if (lineCmp != 0) return lineCmp;
+      final resA = a.resolvedImportedPath ?? '';
+      final resB = b.resolvedImportedPath ?? '';
+      return resA.compareTo(resB);
+    });
+    final seenFiles = <String>{};
+    final examples = <Finding>[];
+    for (final f in forRule) {
+      if (seenFiles.add(f.file)) {
+        examples.add(f);
+        if (examples.length >= 3) break;
+      }
+    }
+    print('Examples:');
+    for (final f in examples) {
+      final loc = f.line != null ? ':${f.line}' : '';
+      final String evidence;
+      if (ruleId == 'cross_feature_coupling' &&
+          f.fromFeature != null &&
+          f.toFeature != null) {
+        final String pathStr;
+        if (f.targetFeaturePath != null &&
+            f.resolvedImportedPath != null &&
+            f.resolvedImportedPath!.startsWith(f.targetFeaturePath!)) {
+          final tail = f.resolvedImportedPath!.length > f.targetFeaturePath!.length + 1
+              ? f.resolvedImportedPath!.substring(f.targetFeaturePath!.length + 1)
+              : '';
+          final tailMax = _maxPathLength - f.targetFeaturePath!.length - 2;
+          pathStr = tailMax > 0
+              ? '${f.targetFeaturePath}/${_truncateMiddle(tail, tailMax)}'
+              : '${f.targetFeaturePath}/...';
+        } else {
+          final path = f.resolvedImportedPath ?? f.file;
+          pathStr = _truncateMiddle(path, _maxPathLength);
+        }
+        evidence = '${f.fromFeature} -> ${f.toFeature} $pathStr';
+      } else {
+        evidence = f.message.length > _maxEvidenceLength
+            ? '${f.message.substring(0, _maxEvidenceLength)}...'
+            : f.message;
+      }
+      print('  ${f.file}$loc $evidence');
+    }
+    final more = forRule.length - examples.length;
+    if (more > 0) print('  (+$more more)');
+  }
+
   static void _printFindingsByCategory(
       ScanReport report, CategoryAggregation aggregation) {
     print('Findings by Category');
@@ -90,26 +212,77 @@ class ConsoleRenderer {
       ruleResultsInCategory.sort((a, b) => a.ruleId.compareTo(b.ruleId));
       print(cs.category);
       for (final r in ruleResultsInCategory) {
+        final forRule = report.uniqueFindings
+            .where((f) => f.ruleId == r.ruleId)
+            .toList();
+        final uniqueCount = forRule.length;
+        final fileCount = forRule.map((f) => f.file).toSet().length;
         final label = ruleIdToDisplayLabel[r.ruleId] ?? r.ruleId;
-        print('  - $label (${r.findings.length})');
+        print('  - $label ($uniqueCount across $fileCount files)');
       }
       print('');
     }
   }
 
+  /// Shared feature path extraction from a file path.
+  /// Normalizes separators (\\ -> /). If path contains "lib/features/",
+  /// returns "lib/features/<featureName>" where featureName is the segment after lib/features/ until next '/'. Else returns null.
+  static String? extractFeaturePathFromFilePath(String filePath) {
+    final norm = filePath.replaceAll(r'\', '/');
+    const prefix = 'lib/features/';
+    if (!norm.contains(prefix)) return null;
+    final idx = norm.indexOf(prefix) + prefix.length;
+    final rest = norm.substring(idx);
+    final nextSlash = rest.indexOf('/');
+    final featureName =
+        nextSlash < 0 ? rest : rest.substring(0, nextSlash);
+    if (featureName.isEmpty) return null;
+    return 'lib/features/$featureName';
+  }
+
+  /// Same logic as [extractFeaturePathFromFilePath] for imported resolved paths.
+  static String? extractFeaturePathFromImportPath(String importedResolvedPath) {
+    return extractFeaturePathFromFilePath(importedResolvedPath);
+  }
+
+  /// Fallback when [extractFeaturePathFromFilePath] returns null: lib/<topFolder> or "other".
+  static String _fallbackKey(String path) {
+    final norm = path.replaceAll(r'\', '/');
+    final segments = norm.split('/');
+    if (segments.length >= 3 &&
+        segments[0] == 'lib' &&
+        segments[1] == 'features') {
+      return 'lib/features/${segments[2]}';
+    }
+    if (segments.length >= 2) {
+      return 'lib/${segments[1]}';
+    }
+    return segments.isNotEmpty && segments[0] == 'lib' ? 'lib' : 'other';
+  }
+
+  /// Source hotspot key: extract from [Finding.file] only (no imported path or message).
+  static String getSourceHotspotKey(Finding f) {
+    return extractFeaturePathFromFilePath(f.file) ?? _fallbackKey(f.file);
+  }
+
+  /// Target hotspot key from [Finding.resolvedImportedPath]. Returns null if none.
+  static String? getTargetHotspotKey(Finding f) {
+    final path = f.resolvedImportedPath;
+    if (path == null || path.isEmpty) return null;
+    return extractFeaturePathFromImportPath(path);
+  }
+
   static void _printTopHotspots(ScanReport report) {
     print('Top Hotspots');
     print('');
-    final findings = report.findings;
+    final findings = report.uniqueFindings;
     if (findings.isEmpty) {
       return;
     }
     final countByKey = <String, int>{};
     for (final f in findings) {
-      final segments = f.file.split('/');
-      final key = segments.length >= 2
-          ? '${segments[0]}/${segments[1]}'
-          : (segments.isNotEmpty ? segments[0] : 'lib');
+      final key =
+          extractFeaturePathFromFilePath(f.file) ?? _fallbackKey(f.file);
       countByKey[key] = (countByKey[key] ?? 0) + 1;
     }
     final entries = countByKey.entries.toList()
@@ -119,8 +292,8 @@ class ConsoleRenderer {
         return a.key.compareTo(b.key);
       });
     final top3 = entries.take(3).toList();
-    for (var i = 0; i < top3.length; i++) {
-      print('${i + 1}. ${top3[i].key} (${top3[i].value} findings)');
+    for (final e in top3) {
+      print('${e.key} (${e.value} findings)');
     }
   }
 

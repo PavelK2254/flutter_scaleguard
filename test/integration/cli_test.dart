@@ -31,6 +31,7 @@ void main() {
         ruleResults: [
           RuleResult(ruleId: 'r', penalty: 0, findings: [medium, high]),
         ],
+        uniqueFindings: [high, medium],
         timestamp: DateTime.now().toUtc(),
       );
       final list = report.findings;

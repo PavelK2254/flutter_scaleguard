@@ -8,6 +8,7 @@ class ScanReport {
     required this.score,
     required this.riskLevel,
     required this.ruleResults,
+    required this.uniqueFindings,
     required this.timestamp,
     this.projectPath,
     this.aggregation,
@@ -16,6 +17,8 @@ class ScanReport {
   final int score;
   final RiskLevel riskLevel;
   final List<RuleResult> ruleResults;
+  /// Deduplicated findings (by fingerprint), deterministically sorted.
+  final List<Finding> uniqueFindings;
   final DateTime timestamp;
   final String? projectPath;
   final CategoryAggregation? aggregation;

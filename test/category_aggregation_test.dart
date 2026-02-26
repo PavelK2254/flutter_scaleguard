@@ -120,5 +120,31 @@ void main() {
       expect(agg.dominantCategory, 'unknown_rule');
       expect(agg.mostExpensiveRuleId, 'unknown_rule');
     });
+
+    test('uniqueFindings dedupes counts by fingerprint', () {
+      final dup = Finding(
+        severity: FindingSeverity.high,
+        ruleId: 'layer_violations',
+        file: 'a.dart',
+        message: 'm',
+      );
+      final results = [
+        RuleResult(
+          ruleId: 'layer_violations',
+          penalty: 10,
+          findings: [dup, dup],
+        ),
+      ];
+      final uniqueFindings = [dup];
+      final agg = CategoryAggregation.fromRuleResults(
+        results,
+        ruleIdToCategory,
+        uniqueFindings: uniqueFindings,
+      );
+      expect(agg.totalPenalty, 10.0);
+      expect(agg.categoryScores.length, 1);
+      expect(agg.categoryScores.first.highCount, 1);
+      expect(agg.categoryScores.first.mediumCount, 0);
+    });
   });
 }

@@ -34,12 +34,21 @@ class CrossFeatureCouplingRule implements Rule {
         final targetNorm = ProjectIndex.normalizePath(importTarget);
         final toFeature = _featureFromPath(targetNorm, featureRoots);
         if (toFeature != null && toFeature != fromFeature) {
+          final base =
+              _normalize(featureRoots.first).endsWith('/')
+                  ? _normalize(featureRoots.first)
+                  : '${_normalize(featureRoots.first)}/';
           findings.add(Finding(
             severity: FindingSeverity.high,
             ruleId: id,
             file: file.path,
             message:
                 'Cross-feature import: $path imports $importTarget (feature $toFeature)',
+            resolvedImportedPath: importTarget,
+            fromFeature: fromFeature,
+            toFeature: toFeature,
+            sourceFeaturePath: '$base$fromFeature',
+            targetFeaturePath: '$base$toFeature',
           ));
         }
       }
