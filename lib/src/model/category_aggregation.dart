@@ -1,3 +1,4 @@
+import 'finding.dart';
 import 'rule_result.dart';
 import 'severity.dart';
 
@@ -42,11 +43,13 @@ class CategoryAggregation {
   final double totalPenalty;
 
   /// Builds aggregation from rule results and ruleId→category mapping.
+  /// When [uniqueFindings] is provided, category high/medium counts use it; otherwise raw findings.
   /// Deterministic: ties resolved alphabetically by category or ruleId.
   static CategoryAggregation fromRuleResults(
     List<RuleResult> results,
-    Map<String, String> ruleIdToCategory,
-  ) {
+    Map<String, String> ruleIdToCategory, {
+    List<Finding>? uniqueFindings,
+  }) {
     double totalPenalty = 0;
     for (final r in results) {
       totalPenalty += r.penalty;
@@ -59,16 +62,31 @@ class CategoryAggregation {
     for (final r in results) {
       final cat = ruleIdToCategory[r.ruleId] ?? r.ruleId;
       categoryPenalty[cat] = (categoryPenalty[cat] ?? 0) + r.penalty;
-      int high = 0, medium = 0;
-      for (final f in r.findings) {
+    }
+
+    if (uniqueFindings != null) {
+      for (final f in uniqueFindings) {
+        final cat = ruleIdToCategory[f.ruleId] ?? f.ruleId;
         if (f.severity == FindingSeverity.high) {
-          high++;
+          categoryHigh[cat] = (categoryHigh[cat] ?? 0) + 1;
         } else {
-          medium++;
+          categoryMedium[cat] = (categoryMedium[cat] ?? 0) + 1;
         }
       }
-      categoryHigh[cat] = (categoryHigh[cat] ?? 0) + high;
-      categoryMedium[cat] = (categoryMedium[cat] ?? 0) + medium;
+    } else {
+      for (final r in results) {
+        final cat = ruleIdToCategory[r.ruleId] ?? r.ruleId;
+        int high = 0, medium = 0;
+        for (final f in r.findings) {
+          if (f.severity == FindingSeverity.high) {
+            high++;
+          } else {
+            medium++;
+          }
+        }
+        categoryHigh[cat] = (categoryHigh[cat] ?? 0) + high;
+        categoryMedium[cat] = (categoryMedium[cat] ?? 0) + medium;
+      }
     }
 
     final categoryScores = <CategoryScore>[];

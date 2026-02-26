@@ -21,23 +21,47 @@ Before the codebase doubles.
 Before refactors become expensive.
 
 ## Example Output
+
+Console report (default) shows the CLI version (from `pubspec.yaml`), score, risk level, summary, dominant risk category, most expensive rule with hotspots and examples, findings by category, top hotspots, and a “Why This Matters” note. Example:
+
 ```
-Flutter ScaleGuard v0.1
+Flutter ScaleGuard v0.3.0
+Project: /path/to/your/flutter_project
 
 Architecture Score: 57/100
 Risk Level: Medium
 
-Primary Structural Risks:
+Summary:
+This codebase shows early-stage coupling patterns that may reduce feature isolation as the team scales.
 
-Cross Feature Coupling (12 findings)
+Dominant Risk Category: Coupling Risk (62% of total penalty)
+Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-18) [Coupling Risk] [rule: cross_feature_coupling]
+Hotspot (source): lib/features/auth (5 findings)
+Hotspot (target): lib/features/profile (4 findings)
+Examples:
+  lib/features/auth/login/login_screen.dart:12 auth -> profile lib/features/profile/profile_repository.dart
+  lib/features/auth/signup/signup_bloc.dart:8 auth -> profile lib/features/profile/models/user.dart
+  (+3 more)
 
-Layer Violations (5 findings)
+---
 
-Most Expensive Risk:
-Cross Feature Coupling (-18 points)
+Findings by Category
 
-Suggested Direction:
-Isolate feature boundaries and enforce layer abstractions.
+Coupling Risk
+  - Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (12 across 4 files)
+  - Layer Boundary Crossed (may increase coupling and future refactor cost) (5 across 3 files)
+
+---
+
+Top Hotspots
+
+lib/features/auth (8 findings)
+lib/features/profile (6 findings)
+
+---
+
+Why This Matters
+Coupling and global access patterns reduce isolation, increasing coordination cost as the codebase grows.
 ```
 
 ## Install
@@ -110,6 +134,20 @@ All thresholds and rule weights/caps are defined in code: see `lib/src/core/conf
 7. **Navigation Coupling** – Direct route strings instead of centralized navigation.
 
 Scoring: start at 100; each rule contributes a penalty `min(cap, weight * risk_value)`; final score is clamped 0–100. Risk level from score bands above.
+
+## Development
+
+- **Version display**  
+  The banner shows the package version (e.g. `Flutter ScaleGuard v0.3.0`). At runtime the version is read from `pubspec.yaml` when possible; a fallback in `lib/src/version.dart` is used for AOT or when the package root cannot be resolved. Keep that fallback in sync with `pubspec.yaml` so the displayed version is always correct.
+
+- **Syncing the version after a release bump**  
+  After bumping `version` in `pubspec.yaml`, update the fallback constant in code:
+
+  ```bash
+  dart run tool/update_version.dart
+  ```
+
+  This script reads the version from `pubspec.yaml` and rewrites `fallbackPackageVersion` in `lib/src/version.dart`.
 
 ## License
 

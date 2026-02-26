@@ -35,11 +35,11 @@ const Map<String, String> defaultLayerMappings = {
 };
 
 /// Allowed layer dependencies: fromLayer -> Set of layers it may import.
-/// presentation -> domain; domain -> (none from other layers); data -> domain.
+/// MVP: same-layer allowed; presentation->domain; data->domain, data->data; domain->data disallowed unless allowDomainToData.
 const Map<String, Set<String>> defaultAllowedLayerDependencies = {
-  layerPresentation: {layerDomain},
-  layerDomain: {},
-  layerData: {layerDomain},
+  layerPresentation: {layerPresentation, layerDomain},
+  layerDomain: {layerDomain},
+  layerData: {layerDomain, layerData},
 };
 
 class ScannerConfig {
@@ -51,6 +51,7 @@ class ScannerConfig {
     this.godFileHighLoc = defaultGodFileHighLoc,
     this.sharedPathSegments = defaultSharedPathSegments,
     this.allowedLayerDependencies = defaultAllowedLayerDependencies,
+    this.allowDomainToData = false,
     this.serviceLocatorPatterns = const [
       'GetIt.instance',
       'GetIt.I',
@@ -76,6 +77,7 @@ class ScannerConfig {
   final int godFileHighLoc;
   final List<String> sharedPathSegments;
   final Map<String, Set<String>> allowedLayerDependencies;
+  final bool allowDomainToData;
   final List<String> serviceLocatorPatterns;
   final List<String> routeConstantPrefixes;
   final List<String> hardcodedUrlPatterns;
@@ -133,6 +135,16 @@ class ScannerConfig {
       }
     }
 
+    final allowDomainToData =
+        (yaml['allow_domain_to_data'] as bool?) ?? false;
+    if (allowDomainToData && allowedLayerDependencies.containsKey(layerDomain)) {
+      allowedLayerDependencies = Map.from(allowedLayerDependencies);
+      allowedLayerDependencies[layerDomain] = {
+        ...?allowedLayerDependencies[layerDomain],
+        layerData,
+      };
+    }
+
     final serviceLocatorPatterns = list('service_locator_patterns', const [
       'GetIt.instance',
       'GetIt.I',
@@ -156,6 +168,7 @@ class ScannerConfig {
       godFileHighLoc: godFileHighLoc,
       sharedPathSegments: sharedPathSegments,
       allowedLayerDependencies: allowedLayerDependencies,
+      allowDomainToData: allowDomainToData,
       serviceLocatorPatterns: serviceLocatorPatterns,
       routeConstantPrefixes: routeConstantPrefixes,
       hardcodedUrlPatterns: hardcodedUrlPatterns,

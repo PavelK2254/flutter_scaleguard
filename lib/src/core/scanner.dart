@@ -4,6 +4,7 @@ import 'config.dart';
 import 'index.dart';
 import 'rule_metadata.dart';
 import '../model/category_aggregation.dart';
+import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/scan_report.dart';
 import '../rules/cross_feature_coupling.dart';
@@ -98,14 +99,42 @@ Future<ScanReport> runScan(String projectPath,
     results.add(rule.run(index, resolvedConfig));
   }
   final scoreResult = ScoringEngine.run(results);
-  final aggregation =
-      CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+  final uniqueFindings = _computeUniqueFindings(results);
+  final aggregation = CategoryAggregation.fromRuleResults(
+    results,
+    ruleIdToCategory,
+    uniqueFindings: uniqueFindings,
+  );
   return ScanReport(
     score: scoreResult.score,
     riskLevel: scoreResult.riskLevel,
     ruleResults: results,
+    uniqueFindings: uniqueFindings,
     timestamp: DateTime.now().toUtc(),
     projectPath: projectPath,
     aggregation: aggregation,
   );
+}
+
+/// Flattens findings from [results], sorts deterministically, dedupes by fingerprint.
+List<Finding> _computeUniqueFindings(List<RuleResult> results) {
+  final all = <Finding>[];
+  for (final r in results) all.addAll(r.findings);
+  all.sort((a, b) {
+    final sev = b.severity.index.compareTo(a.severity.index);
+    if (sev != 0) return sev;
+    final file = a.file.compareTo(b.file);
+    if (file != 0) return file;
+    final al = a.line ?? 0;
+    final bl = b.line ?? 0;
+    final lineCmp = al.compareTo(bl);
+    if (lineCmp != 0) return lineCmp;
+    return a.evidenceNormalized.compareTo(b.evidenceNormalized);
+  });
+  final seen = <String>{};
+  final out = <Finding>[];
+  for (final f in all) {
+    if (seen.add(f.fingerprint)) out.add(f);
+  }
+  return out;
 }

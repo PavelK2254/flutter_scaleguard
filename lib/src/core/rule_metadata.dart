@@ -56,7 +56,7 @@ final Map<String, String> categoryToSummary = {
 /// Why-this-matters explanation per dominant category.
 final Map<String, String> categoryToWhyItMatters = {
   categoryCouplingRisk:
-      'Coupling between features and global access patterns make it harder to change one area without affecting others. Addressing these early improves feature velocity and reduces refactor cost.',
+      'Coupling and global access patterns reduce isolation, increasing coordination cost as the codebase grows.',
   categoryStructuralRisk:
       'Layer and boundary violations accumulate technical debt and make large refactors riskier. Clarifying boundaries now reduces future refactor complexity.',
   categoryMaintainabilityRisk:
