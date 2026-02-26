@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 /// Fallback when package resolution or pubspec read fails (e.g. AOT, tests).
-const String fallbackPackageVersion = '0.2.1';
+/// Keep in sync with pubspec.yaml: run `dart run tool/update_version.dart` after bumping version.
+const String fallbackPackageVersion = '0.3.0';
 
 /// Loads the package version from [pubspec.yaml] so the CLI banner stays in sync.
 /// Returns [fallbackPackageVersion] if resolution or parsing fails.
