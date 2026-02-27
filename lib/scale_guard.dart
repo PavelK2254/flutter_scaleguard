@@ -9,6 +9,7 @@ export 'src/model/category_aggregation.dart';
 export 'src/model/finding.dart';
 export 'src/model/rule_result.dart';
 export 'src/model/scan_report.dart';
+export 'src/model/scan_meta.dart';
 export 'src/model/severity.dart';
 export 'src/model/risk_level.dart';
 export 'src/rules/rule.dart';

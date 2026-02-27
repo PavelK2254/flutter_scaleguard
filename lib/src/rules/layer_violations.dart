@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/path_utils.dart' as path_utils;
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -14,38 +15,68 @@ enum Layer {
 }
 
 /// Default path patterns when layer_mappings don't match (segment in path).
+/// Order: presentation > domain > data (first match wins).
 const Map<Layer, List<String>> _defaultPathPatterns = {
-  Layer.presentation: ['/presentation/', '/ui/', '/widgets/', '/pages/', '/bloc/'],
+  Layer.presentation: [
+    '/presentation/',
+    '/ui/',
+    '/widgets/',
+    '/pages/',
+    '/bloc/',
+    '/cubit/',
+  ],
   Layer.domain: ['/domain/', '/usecases/', '/entities/'],
-  Layer.data: ['/data/', '/datasource/', '/remote/', '/local/', '/repositories/'],
+  Layer.data: [
+    '/data/',
+    '/datasource/',
+    '/datasources/',
+    '/remote/',
+    '/local/',
+    '/repository/',
+    '/repositories/',
+  ],
 };
 
-/// Classifies [path] to a layer using [config].layerMappings if available, else default path patterns.
-Layer classifyPath(String path, ScannerConfig config) {
-  final norm = path.replaceAll('\\', '/');
+/// Priority order for layer classification (first match wins).
+const _layerPriority = [Layer.presentation, Layer.domain, Layer.data];
+
+Map<Layer, List<String>> _segmentsByLayer(ScannerConfig config) {
+  final map = <Layer, List<String>>{};
+  for (final layer in _layerPriority) {
+    final segments = config.layerMappings.entries
+        .where((e) => e.value == layer.name)
+        .map((e) => e.key)
+        .toList();
+    segments.sort((a, b) => b.length.compareTo(a.length));
+    map[layer] = segments;
+  }
+  return map;
+}
+
+Layer _classifyPathWithSegments(
+    String norm, ScannerConfig config, Map<Layer, List<String>>? segmentsByLayer) {
   if (config.layerMappings.isNotEmpty) {
-    for (final entry in config.layerMappings.entries) {
-      final segment = entry.key;
-      if (norm.contains('/$segment/') || norm.endsWith('/$segment')) {
-        switch (entry.value) {
-          case 'presentation':
-            return Layer.presentation;
-          case 'domain':
-            return Layer.domain;
-          case 'data':
-            return Layer.data;
-          default:
-            return Layer.unknown;
+    final byLayer = segmentsByLayer ?? _segmentsByLayer(config);
+    for (final layer in _layerPriority) {
+      for (final segment in byLayer[layer]!) {
+        if (norm.contains('/$segment/') || norm.endsWith('/$segment')) {
+          return layer;
         }
       }
     }
   }
-  for (final e in _defaultPathPatterns.entries) {
-    for (final pattern in e.value) {
-      if (norm.contains(pattern)) return e.key;
+  for (final layer in _layerPriority) {
+    for (final pattern in _defaultPathPatterns[layer]!) {
+      if (norm.contains(pattern)) return layer;
     }
   }
   return Layer.unknown;
+}
+
+/// Classifies [path] to a layer using [config].layerMappings if available, else default path patterns.
+/// Enforces priority: presentation > domain > data. When using layerMappings, longest matching segment wins per layer.
+Layer classifyPath(String path, ScannerConfig config) {
+  return _classifyPathWithSegments(path_utils.normalizePath(path), config, null);
 }
 
 /// Detects invalid imports between presentation, domain, data.
@@ -62,9 +93,11 @@ class LayerViolationsRule implements Rule {
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
     final findings = <Finding>[];
+    final segmentsByLayer = _segmentsByLayer(config);
     for (final file in index.files) {
       final fromPath = ProjectIndex.normalizePath(file.path);
-      final fromLayer = classifyPath(fromPath, config);
+      final fromNorm = path_utils.normalizePath(fromPath);
+      final fromLayer = _classifyPathWithSegments(fromNorm, config, segmentsByLayer);
       if (fromLayer == Layer.unknown) continue;
       final rawAllowed = config.allowedLayerDependencies[fromLayer.name];
       if (rawAllowed == null) continue;
@@ -74,7 +107,8 @@ class LayerViolationsRule implements Rule {
       }
       for (final importTarget in file.imports) {
         final toPath = ProjectIndex.normalizePath(importTarget);
-        final toLayer = classifyPath(toPath, config);
+        final toNorm = path_utils.normalizePath(toPath);
+        final toLayer = _classifyPathWithSegments(toNorm, config, segmentsByLayer);
         if (toLayer == Layer.unknown) continue;
         if (fromLayer == toLayer) continue;
         if (!allowed.contains(toLayer.name)) {

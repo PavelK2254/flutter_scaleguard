@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/path_utils.dart' as path_utils;
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -52,7 +53,7 @@ class HardcodedScaleRisksRule implements Rule {
   }
 
   static String? _layerFromPath(String path, ScannerConfig config) {
-    final norm = path.replaceAll('\\', '/');
+    final norm = path_utils.normalizePath(path);
     for (final entry in config.layerMappings.entries) {
       final segment = entry.key;
       if (norm.contains('/$segment/') || norm.endsWith('/$segment')) {

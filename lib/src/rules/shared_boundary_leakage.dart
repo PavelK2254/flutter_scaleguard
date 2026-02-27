@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/path_utils.dart' as path_utils;
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -19,7 +20,7 @@ class SharedBoundaryLeakageRule implements Rule {
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
     final findings = <Finding>[];
-    final featureRoots = config.featureRoots.map((r) => _normalize(r)).toList();
+    final featureRoots = config.featureRoots.map((r) => path_utils.normalizePath(r)).toList();
     for (final file in index.files) {
       final path = ProjectIndex.normalizePath(file.path);
       final inShared = config.sharedPathSegments.any((s) {
@@ -48,6 +49,4 @@ class SharedBoundaryLeakageRule implements Rule {
     return RuleResult(
         ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
-
-  static String _normalize(String p) => p.replaceAll('\\', '/');
 }

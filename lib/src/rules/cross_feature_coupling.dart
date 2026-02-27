@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/path_utils.dart' as path_utils;
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -19,7 +20,7 @@ class CrossFeatureCouplingRule implements Rule {
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
     final findings = <Finding>[];
-    final featureRoots = config.featureRoots.map((r) => _normalize(r)).toList();
+    final featureRoots = config.featureRoots.map((r) => path_utils.normalizePath(r)).toList();
     final pathToFeature = <String, String>{};
     for (final f in index.files) {
       final path = ProjectIndex.normalizePath(f.path);
@@ -34,10 +35,8 @@ class CrossFeatureCouplingRule implements Rule {
         final targetNorm = ProjectIndex.normalizePath(importTarget);
         final toFeature = _featureFromPath(targetNorm, featureRoots);
         if (toFeature != null && toFeature != fromFeature) {
-          final base =
-              _normalize(featureRoots.first).endsWith('/')
-                  ? _normalize(featureRoots.first)
-                  : '${_normalize(featureRoots.first)}/';
+          final first = path_utils.normalizePath(featureRoots.first);
+          final base = first.endsWith('/') ? first : '$first/';
           findings.add(Finding(
             severity: FindingSeverity.high,
             ruleId: id,
@@ -59,10 +58,8 @@ class CrossFeatureCouplingRule implements Rule {
         ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
-  static String _normalize(String p) => p.replaceAll('\\', '/');
-
   static String? _featureFromPath(String path, List<String> featureRoots) {
-    final norm = _normalize(path);
+    final norm = path_utils.normalizePath(path);
     for (final root in featureRoots) {
       final r = root.endsWith('/') ? root : '$root/';
       if (norm.startsWith(r)) {

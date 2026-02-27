@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+import 'path_utils.dart' as path_utils;
+
 /// Default LOC threshold for "medium" god file finding.
 const int defaultGodFileMediumLoc = 500;
 
@@ -15,11 +17,19 @@ const String defaultFeatureRoot = 'lib/features';
 const List<String> defaultSharedPathSegments = ['shared', 'common'];
 
 /// Default ignore patterns (file path contains or ends with).
+/// Segment-based: e.g. /build/ means path contains "/build/".
 const List<String> defaultIgnoredPatterns = [
   '.g.dart',
   '.freezed.dart',
   '.gen.dart',
   '/build/',
+  '/.dart_tool/',
+  '/generated/',
+  '/gen/',
+  '/ios/',
+  '/android/',
+  '/test/',
+  '/integration_test/',
 ];
 
 /// Layer names for clean architecture.
@@ -84,7 +94,7 @@ class ScannerConfig {
 
   /// Load config from project root. If [risk_scanner.yaml] exists, merge with defaults.
   static Future<ScannerConfig> load(String projectPath) async {
-    final dir = projectPath.replaceAll('\\', '/');
+    final dir = path_utils.normalizePath(projectPath);
     final base = dir.endsWith('/') ? dir : '$dir/';
     final file = File('${base}risk_scanner.yaml');
     if (!await file.exists()) {
@@ -177,7 +187,7 @@ class ScannerConfig {
 
   /// Returns true if [path] should be ignored (e.g. generated files).
   bool shouldIgnore(String path) {
-    final normalized = path.replaceAll('\\', '/');
+    final normalized = path_utils.normalizePath(path);
     for (final p in ignoredPatterns) {
       if (normalized.contains(p) || normalized.endsWith(p)) return true;
     }

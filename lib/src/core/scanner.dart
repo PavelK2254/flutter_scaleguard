@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'config.dart';
 import 'index.dart';
+import 'path_utils.dart' as path_utils;
 import 'rule_metadata.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
 import '../model/rule_result.dart';
+import '../model/scan_meta.dart';
 import '../model/scan_report.dart';
 import '../rules/cross_feature_coupling.dart';
 import '../rules/god_files.dart';
@@ -20,33 +22,154 @@ import '../scoring/scoring_engine.dart';
 final _importRegex = RegExp(r'''import\s+['"]([^'"]+)['"]''');
 final _exportRegex = RegExp(r'''export\s+['"]([^'"]+)['"]''');
 
-/// Builds [ProjectIndex] from a project directory.
-Future<ProjectIndex> buildIndex(String projectPath, ScannerConfig config,
+/// Builds [ProjectIndex] and [ScanMeta] from a project directory.
+final _importCache = <String, String?>{};
+
+/// Builds index and scan meta. For index-only use, call [buildIndex] instead.
+Future<({ProjectIndex index, ScanMeta meta})> buildIndexWithMeta(
+    String projectPath, ScannerConfig config,
     {bool includeLines = true}) async {
   final libDir = Directory('$projectPath/lib');
   if (!await libDir.exists()) {
-    return const ProjectIndex(files: []);
+    return (
+      index: const ProjectIndex(files: []),
+      meta: const ScanMeta(
+        schemaVersion: ScanMeta.defaultSchemaVersion,
+        scannedFiles: 0,
+        ignoredFiles: 0,
+        importsTotal: 0,
+        importsResolvedToProject: 0,
+        importsExternalPackage: 0,
+        importsUnresolved: 0,
+      ),
+    );
   }
+  _importCache.clear();
   final packageName = await _readPackageName(projectPath);
   final files = <IndexedFile>[];
-  final root =
-      projectPath.replaceAll('\\', '/').replaceFirst(RegExp(r'/$'), '');
+  var scannedFiles = 0;
+  var ignoredFiles = 0;
+  var totalImports = 0;
+  var resolvedToProject = 0;
+  var externalPackage = 0;
+  var unresolved = 0;
+  final rootNorm = path_utils.normalizePath(projectPath);
+  final root = rootNorm.endsWith('/')
+      ? rootNorm.substring(0, rootNorm.length - 1)
+      : rootNorm;
   await for (final entity in libDir.list(recursive: true, followLinks: false)) {
     if (entity is! File) continue;
-    final path = entity.path.replaceAll('\\', '/');
+    final path = path_utils.normalizePath(entity.path);
     if (!path.endsWith('.dart')) continue;
     String relative =
         path.startsWith(root) ? path.substring(root.length) : path;
     if (relative.startsWith('/')) relative = relative.substring(1);
-    if (config.shouldIgnore(relative)) continue;
+    if (config.shouldIgnore(relative)) {
+      ignoredFiles++;
+      continue;
+    }
     final content = await entity.readAsString();
     final lineCount = content.split('\n').length;
     final lines = includeLines ? content.split('\n') : <String>[];
-    final imports = _parseImports(content, relative, packageName);
+    final (imports, counts) =
+        _parseImports(content, relative, packageName, _importCache);
+    scannedFiles++;
+    totalImports += counts.total;
+    resolvedToProject += counts.resolvedToProject;
+    externalPackage += counts.externalPackage;
+    unresolved += counts.unresolved;
     files.add(IndexedFile(
         path: relative, lineCount: lineCount, imports: imports, lines: lines));
   }
-  return ProjectIndex(files: files, packageName: packageName);
+  final meta = ScanMeta(
+    schemaVersion: ScanMeta.defaultSchemaVersion,
+    scannedFiles: scannedFiles,
+    ignoredFiles: ignoredFiles,
+    importsTotal: totalImports,
+    importsResolvedToProject: resolvedToProject,
+    importsExternalPackage: externalPackage,
+    importsUnresolved: unresolved,
+  );
+  return (
+    index: ProjectIndex(files: files, packageName: packageName),
+    meta: meta,
+  );
+}
+
+/// Builds [ProjectIndex] from a project directory. For index and [ScanMeta], use [buildIndexWithMeta].
+Future<ProjectIndex> buildIndex(
+    String projectPath, ScannerConfig config,
+    {bool includeLines = true}) async {
+  final result = await buildIndexWithMeta(projectPath, config, includeLines: includeLines);
+  return result.index;
+}
+
+class _ImportCounts {
+  _ImportCounts(this.total, this.resolvedToProject, this.externalPackage,
+      this.unresolved);
+  final int total;
+  final int resolvedToProject;
+  final int externalPackage;
+  final int unresolved;
+}
+
+/// Returns category for counting: resolvedToProject, externalPackage, or unresolved.
+String _classifyImport(String target, String? resolved, String? packageName) {
+  if (resolved != null && resolved.isNotEmpty) return 'resolvedToProject';
+  if (target.startsWith('dart:') || target.startsWith('flutter:')) {
+    return 'externalPackage';
+  }
+  if (target.startsWith('package:')) {
+    if (packageName == null) return 'externalPackage';
+    final rest = target.substring(8).trim();
+    final slash = rest.indexOf('/');
+    final pkg = slash < 0 ? rest : rest.substring(0, slash);
+    if (pkg != packageName) return 'externalPackage';
+  }
+  return 'unresolved';
+}
+
+(List<String>, _ImportCounts) _parseImports(
+    String content, String fromPath, String? packageName,
+    Map<String, String?> cache) {
+  final result = <String>[];
+  var total = 0;
+  var resolvedToProject = 0;
+  var externalPackage = 0;
+  var unresolved = 0;
+  final sourceDir = fromPath.contains('/')
+      ? fromPath.substring(0, fromPath.lastIndexOf('/') + 1)
+      : '';
+  for (final line in content.split('\n')) {
+    final trimmed = line.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
+    for (final re in [_importRegex, _exportRegex]) {
+      final m = re.firstMatch(trimmed);
+      if (m != null) {
+        final target = m.group(1)!;
+        final cacheKey = '$sourceDir|$target';
+        final resolved = cache.putIfAbsent(
+          cacheKey,
+          () => ProjectIndex.resolveImportPath(fromPath, target, packageName),
+        );
+        total++;
+        final category = _classifyImport(target, resolved, packageName);
+        switch (category) {
+          case 'resolvedToProject':
+            resolvedToProject++;
+            break;
+          case 'externalPackage':
+            externalPackage++;
+            break;
+          default:
+            unresolved++;
+        }
+        if (resolved != null && resolved.isNotEmpty) result.add(resolved);
+        break;
+      }
+    }
+  }
+  return (result, _ImportCounts(total, resolvedToProject, externalPackage, unresolved));
 }
 
 Future<String?> _readPackageName(String projectPath) async {
@@ -55,26 +178,6 @@ Future<String?> _readPackageName(String projectPath) async {
   final content = await pubspec.readAsString();
   final match = RegExp(r'name:\s*(\S+)').firstMatch(content);
   return match?.group(1);
-}
-
-List<String> _parseImports(
-    String content, String fromPath, String? packageName) {
-  final result = <String>[];
-  for (final line in content.split('\n')) {
-    final trimmed = line.trim();
-    if (trimmed.startsWith('//') || trimmed.startsWith('/*')) continue;
-    for (final re in [_importRegex, _exportRegex]) {
-      final m = re.firstMatch(trimmed);
-      if (m != null) {
-        final target = m.group(1)!;
-        final resolved =
-            ProjectIndex.resolveImportPath(fromPath, target, packageName);
-        if (resolved != null && resolved.isNotEmpty) result.add(resolved);
-        break;
-      }
-    }
-  }
-  return result;
 }
 
 /// Default rules (all 7) for a full scan.
@@ -92,7 +195,7 @@ List<Rule> get defaultRules => [
 Future<ScanReport> runScan(String projectPath,
     {ScannerConfig? config, List<Rule>? rules}) async {
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
-  final index = await buildIndex(projectPath, resolvedConfig);
+  final (:index, :meta) = await buildIndexWithMeta(projectPath, resolvedConfig);
   final ruleList = rules ?? defaultRules;
   final results = <RuleResult>[];
   for (final rule in ruleList) {
@@ -113,6 +216,7 @@ Future<ScanReport> runScan(String projectPath,
     timestamp: DateTime.now().toUtc(),
     projectPath: projectPath,
     aggregation: aggregation,
+    meta: meta,
   );
 }
 
