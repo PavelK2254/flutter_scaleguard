@@ -25,7 +25,8 @@ final _exportRegex = RegExp(r'''export\s+['"]([^'"]+)['"]''');
 /// Builds [ProjectIndex] and [ScanMeta] from a project directory.
 final _importCache = <String, String?>{};
 
-Future<({ProjectIndex index, ScanMeta meta})> buildIndex(
+/// Builds index and scan meta. For index-only use, call [buildIndex] instead.
+Future<({ProjectIndex index, ScanMeta meta})> buildIndexWithMeta(
     String projectPath, ScannerConfig config,
     {bool includeLines = true}) async {
   final libDir = Directory('$projectPath/lib');
@@ -93,6 +94,14 @@ Future<({ProjectIndex index, ScanMeta meta})> buildIndex(
     index: ProjectIndex(files: files, packageName: packageName),
     meta: meta,
   );
+}
+
+/// Builds [ProjectIndex] from a project directory. For index and [ScanMeta], use [buildIndexWithMeta].
+Future<ProjectIndex> buildIndex(
+    String projectPath, ScannerConfig config,
+    {bool includeLines = true}) async {
+  final result = await buildIndexWithMeta(projectPath, config, includeLines: includeLines);
+  return result.index;
 }
 
 class _ImportCounts {
@@ -186,7 +195,7 @@ List<Rule> get defaultRules => [
 Future<ScanReport> runScan(String projectPath,
     {ScannerConfig? config, List<Rule>? rules}) async {
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
-  final (:index, :meta) = await buildIndex(projectPath, resolvedConfig);
+  final (:index, :meta) = await buildIndexWithMeta(projectPath, resolvedConfig);
   final ruleList = rules ?? defaultRules;
   final results = <RuleResult>[];
   for (final rule in ruleList) {

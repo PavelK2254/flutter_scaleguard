@@ -40,19 +40,25 @@ const Map<Layer, List<String>> _defaultPathPatterns = {
 /// Priority order for layer classification (first match wins).
 const _layerPriority = [Layer.presentation, Layer.domain, Layer.data];
 
-/// Classifies [path] to a layer using [config].layerMappings if available, else default path patterns.
-/// Enforces priority: presentation > domain > data. When using layerMappings, longest matching segment wins per layer.
-Layer classifyPath(String path, ScannerConfig config) {
-  final norm = path_utils.normalizePath(path);
+Map<Layer, List<String>> _segmentsByLayer(ScannerConfig config) {
+  final map = <Layer, List<String>>{};
+  for (final layer in _layerPriority) {
+    final segments = config.layerMappings.entries
+        .where((e) => e.value == layer.name)
+        .map((e) => e.key)
+        .toList();
+    segments.sort((a, b) => b.length.compareTo(a.length));
+    map[layer] = segments;
+  }
+  return map;
+}
+
+Layer _classifyPathWithSegments(
+    String norm, ScannerConfig config, Map<Layer, List<String>>? segmentsByLayer) {
   if (config.layerMappings.isNotEmpty) {
+    final byLayer = segmentsByLayer ?? _segmentsByLayer(config);
     for (final layer in _layerPriority) {
-      final layerName = layer.name;
-      final segments = config.layerMappings.entries
-          .where((e) => e.value == layerName)
-          .map((e) => e.key)
-          .toList();
-      segments.sort((a, b) => b.length.compareTo(a.length));
-      for (final segment in segments) {
+      for (final segment in byLayer[layer]!) {
         if (norm.contains('/$segment/') || norm.endsWith('/$segment')) {
           return layer;
         }
@@ -65,6 +71,12 @@ Layer classifyPath(String path, ScannerConfig config) {
     }
   }
   return Layer.unknown;
+}
+
+/// Classifies [path] to a layer using [config].layerMappings if available, else default path patterns.
+/// Enforces priority: presentation > domain > data. When using layerMappings, longest matching segment wins per layer.
+Layer classifyPath(String path, ScannerConfig config) {
+  return _classifyPathWithSegments(path_utils.normalizePath(path), config, null);
 }
 
 /// Detects invalid imports between presentation, domain, data.
@@ -81,9 +93,11 @@ class LayerViolationsRule implements Rule {
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
     final findings = <Finding>[];
+    final segmentsByLayer = _segmentsByLayer(config);
     for (final file in index.files) {
       final fromPath = ProjectIndex.normalizePath(file.path);
-      final fromLayer = classifyPath(fromPath, config);
+      final fromNorm = path_utils.normalizePath(fromPath);
+      final fromLayer = _classifyPathWithSegments(fromNorm, config, segmentsByLayer);
       if (fromLayer == Layer.unknown) continue;
       final rawAllowed = config.allowedLayerDependencies[fromLayer.name];
       if (rawAllowed == null) continue;
@@ -93,7 +107,8 @@ class LayerViolationsRule implements Rule {
       }
       for (final importTarget in file.imports) {
         final toPath = ProjectIndex.normalizePath(importTarget);
-        final toLayer = classifyPath(toPath, config);
+        final toNorm = path_utils.normalizePath(toPath);
+        final toLayer = _classifyPathWithSegments(toNorm, config, segmentsByLayer);
         if (toLayer == Layer.unknown) continue;
         if (fromLayer == toLayer) continue;
         if (!allowed.contains(toLayer.name)) {

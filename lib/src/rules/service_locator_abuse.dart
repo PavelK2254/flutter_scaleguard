@@ -69,12 +69,15 @@ class ServiceLocatorAbuseRule implements Rule {
         ruleId: id, penalty: penalty, findings: findings, riskValue: riskValue);
   }
 
-  /// Build word-boundary regex per pattern; null means use substring fallback.
+  /// Build word-boundary regex per pattern when pattern starts/ends with word chars; null means use substring fallback.
   static List<RegExp?> _buildPatternRegexes(List<String> patterns) {
     return patterns.map((pattern) {
       try {
         final escaped = RegExp.escape(pattern);
-        return RegExp('\\b$escaped\\b');
+        final startBoundary = pattern.isNotEmpty && RegExp(r'\w').hasMatch(pattern[0]);
+        final endBoundary = pattern.isNotEmpty && RegExp(r'\w').hasMatch(pattern[pattern.length - 1]);
+        final regex = '${startBoundary ? r'\b' : ''}$escaped${endBoundary ? r'\b' : ''}';
+        return RegExp(regex);
       } catch (_) {
         return null;
       }

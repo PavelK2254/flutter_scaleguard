@@ -42,10 +42,12 @@ class ConsoleRenderer {
                   .round()
               : 0)
           : 0;
-      final dominantSuffix = agg.totalPenalty <= _softPenaltyThreshold
+      final dominantSuffix = agg.totalPenalty > 0 && agg.totalPenalty <= _softPenaltyThreshold
           ? ' ($pct% of total penalty, low intensity)'
           : ' ($pct% of total penalty)';
-      print('Dominant Risk Category: ${agg.dominantCategory}$dominantSuffix');
+      if (agg.dominantCategory.isNotEmpty || agg.totalPenalty > 0) {
+        print('Dominant Risk Category: ${agg.dominantCategory}$dominantSuffix');
+      }
       final displayName = ruleIdToDisplayLabel[agg.mostExpensiveRuleId] ??
           agg.mostExpensiveRuleId;
       final mostExpCategory =
