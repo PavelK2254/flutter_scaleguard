@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/path_utils.dart' as path_utils;
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -14,35 +15,53 @@ enum Layer {
 }
 
 /// Default path patterns when layer_mappings don't match (segment in path).
+/// Order: presentation > domain > data (first match wins).
 const Map<Layer, List<String>> _defaultPathPatterns = {
-  Layer.presentation: ['/presentation/', '/ui/', '/widgets/', '/pages/', '/bloc/'],
+  Layer.presentation: [
+    '/presentation/',
+    '/ui/',
+    '/widgets/',
+    '/pages/',
+    '/bloc/',
+    '/cubit/',
+  ],
   Layer.domain: ['/domain/', '/usecases/', '/entities/'],
-  Layer.data: ['/data/', '/datasource/', '/remote/', '/local/', '/repositories/'],
+  Layer.data: [
+    '/data/',
+    '/datasource/',
+    '/datasources/',
+    '/remote/',
+    '/local/',
+    '/repository/',
+    '/repositories/',
+  ],
 };
 
+/// Priority order for layer classification (first match wins).
+const _layerPriority = [Layer.presentation, Layer.domain, Layer.data];
+
 /// Classifies [path] to a layer using [config].layerMappings if available, else default path patterns.
+/// Enforces priority: presentation > domain > data. When using layerMappings, longest matching segment wins per layer.
 Layer classifyPath(String path, ScannerConfig config) {
-  final norm = path.replaceAll('\\', '/');
+  final norm = path_utils.normalizePath(path);
   if (config.layerMappings.isNotEmpty) {
-    for (final entry in config.layerMappings.entries) {
-      final segment = entry.key;
-      if (norm.contains('/$segment/') || norm.endsWith('/$segment')) {
-        switch (entry.value) {
-          case 'presentation':
-            return Layer.presentation;
-          case 'domain':
-            return Layer.domain;
-          case 'data':
-            return Layer.data;
-          default:
-            return Layer.unknown;
+    for (final layer in _layerPriority) {
+      final layerName = layer.name;
+      final segments = config.layerMappings.entries
+          .where((e) => e.value == layerName)
+          .map((e) => e.key)
+          .toList();
+      segments.sort((a, b) => b.length.compareTo(a.length));
+      for (final segment in segments) {
+        if (norm.contains('/$segment/') || norm.endsWith('/$segment')) {
+          return layer;
         }
       }
     }
   }
-  for (final e in _defaultPathPatterns.entries) {
-    for (final pattern in e.value) {
-      if (norm.contains(pattern)) return e.key;
+  for (final layer in _layerPriority) {
+    for (final pattern in _defaultPathPatterns[layer]!) {
+      if (norm.contains(pattern)) return layer;
     }
   }
   return Layer.unknown;

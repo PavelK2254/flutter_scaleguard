@@ -14,6 +14,53 @@ void main() {
       expect(report.timestamp, isNotNull);
     });
 
+    test('runScan returns report with meta (schema and counts)', () async {
+      final dir = Directory.current;
+      final report = await runScan(dir.path);
+      expect(report.meta, isNotNull);
+      expect(report.meta!.schemaVersion, '1.0');
+      expect(report.meta!.scannedFiles, greaterThanOrEqualTo(0));
+      expect(report.meta!.ignoredFiles, greaterThanOrEqualTo(0));
+      expect(report.meta!.importsTotal, greaterThanOrEqualTo(0));
+      expect(report.meta!.importsResolvedToProject, greaterThanOrEqualTo(0));
+      expect(report.meta!.importsExternalPackage, greaterThanOrEqualTo(0));
+      expect(report.meta!.importsUnresolved, greaterThanOrEqualTo(0));
+    });
+
+    test('meta is stable across two runs', () async {
+      final dir = Directory.current;
+      final report1 = await runScan(dir.path);
+      final report2 = await runScan(dir.path);
+      expect(report1.meta, isNotNull);
+      expect(report2.meta, isNotNull);
+      expect(report1.meta, equals(report2.meta));
+    });
+
+    test('JSON output includes meta when report has meta', () async {
+      final report = await runScan(Directory.current.path);
+      expect(report.meta, isNotNull);
+      final json = JsonRenderer.render(report);
+      expect(json, contains('"meta"'));
+      expect(json, contains('"scannedFiles"'));
+      expect(json, contains('"ignoredFiles"'));
+      expect(json, contains('"imports"'));
+      expect(json, contains('"resolvedToProject"'));
+    });
+
+    test('CLI with --stats prints Scan Stats section', () async {
+      final dir = Directory.current.path;
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir, '--stats'],
+        runInShell: true,
+        workingDirectory: Directory.current.path,
+      );
+      expect(result.stderr, isEmpty);
+      expect(result.stdout, contains('Scan Stats'));
+      expect(result.stdout, contains('Files scanned:'));
+      expect(result.stdout, contains('Imports:'));
+    });
+
     test('ScanReport findings are sorted by severity then file then line', () {
       final high = Finding(
           severity: FindingSeverity.high,

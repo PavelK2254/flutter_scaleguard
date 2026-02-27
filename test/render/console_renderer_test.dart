@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:scale_guard/scale_guard.dart';
+import 'package:scale_guard/src/core/rule_metadata.dart' as meta;
 import 'package:test/test.dart';
 
 /// Minimal mapping for tests (matches rule_metadata.ruleIdToCategory for used rules).
@@ -211,6 +212,93 @@ void main() {
         isTrue,
         reason: 'Mismatch note when an example is from a non-hotspot feature',
       );
+    });
+  });
+
+  group('Summary intensity (soft vs standard)', () {
+    List<String> capturePrint(void Function() body) {
+      final lines = <String>[];
+      runZoned(body,
+          zoneSpecification: ZoneSpecification(
+            print: (self, parent, zone, line) => lines.add(line),
+          ));
+      return lines;
+    }
+
+    test('score 97 with small penalty uses soft summary', () {
+      final results = [
+        RuleResult(
+          ruleId: 'cross_feature_coupling',
+          penalty: 5,
+          findings: [
+            Finding(
+              severity: FindingSeverity.medium,
+              ruleId: 'cross_feature_coupling',
+              file: 'lib/a.dart',
+              message: 'x',
+            ),
+          ],
+        ),
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 97,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: results.expand((r) => r.findings).toList(),
+        timestamp: DateTime.now().toUtc(),
+        aggregation: aggregation,
+      );
+      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final fullOutput = lines.join('\n');
+      expect(fullOutput, contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk]));
+      expect(fullOutput, isNot(contains(meta.categoryToSummary[meta.categoryCouplingRisk])));
+      expect(fullOutput, contains(meta.categoryToWhySoft[meta.categoryCouplingRisk]));
+      expect(fullOutput, isNot(contains(meta.categoryToWhyStandard[meta.categoryCouplingRisk])));
+      final dominantLine = lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
+      expect(dominantLine, contains(', low intensity)'));
+    });
+
+    test('score 70 with larger penalty uses standard summary', () {
+      final results = [
+        RuleResult(
+          ruleId: 'cross_feature_coupling',
+          penalty: 20,
+          findings: [
+            Finding(
+              severity: FindingSeverity.high,
+              ruleId: 'cross_feature_coupling',
+              file: 'lib/a.dart',
+              message: 'x',
+            ),
+          ],
+        ),
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 70,
+        riskLevel: RiskLevel.medium,
+        ruleResults: results,
+        uniqueFindings: results.expand((r) => r.findings).toList(),
+        timestamp: DateTime.now().toUtc(),
+        aggregation: aggregation,
+      );
+      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final fullOutput = lines.join('\n');
+      expect(fullOutput, contains(meta.categoryToSummary[meta.categoryCouplingRisk]));
+      expect(fullOutput, isNot(contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk])));
+      expect(fullOutput, contains(meta.categoryToWhyStandard[meta.categoryCouplingRisk]));
+      expect(fullOutput, isNot(contains(meta.categoryToWhySoft[meta.categoryCouplingRisk])));
+      final dominantLine = lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
+      expect(dominantLine, isNot(contains('low intensity')));
     });
   });
 }

@@ -7,11 +7,12 @@
 # god_file_medium_loc: 500
 # god_file_high_loc: 900
 
-# ignored_patterns:
+# ignored_patterns: (defaults also include .dart_tool, generated, gen, ios, android, test, integration_test)
 #   - .g.dart
 #   - .freezed.dart
 #   - .gen.dart
 #   - /build/
+# Remove /gen/ from defaults if your project does not use it.
 
 # shared_path_segments:
 #   - shared

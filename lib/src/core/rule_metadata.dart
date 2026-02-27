@@ -41,7 +41,7 @@ final Map<String, String> ruleIdToDisplayLabel = {
       'Navigation Logic Bypasses Routing Layer (tightens screen coupling)',
 };
 
-/// Deterministic summary sentence per dominant category.
+/// Deterministic summary sentence per dominant category (standard intensity).
 final Map<String, String> categoryToSummary = {
   categoryCouplingRisk:
       'This codebase shows early-stage coupling patterns that may reduce feature isolation as the team scales.',
@@ -53,8 +53,20 @@ final Map<String, String> categoryToSummary = {
       'Runtime configuration values are embedded in code, increasing release and environment risk.',
 };
 
-/// Why-this-matters explanation per dominant category.
-final Map<String, String> categoryToWhyItMatters = {
+/// Softer summary sentence per dominant category (when score >= 90 or totalPenalty <= 8).
+final Map<String, String> categoryToSummarySoft = {
+  categoryCouplingRisk:
+      'Minor coupling signals are present; consider watching feature boundaries as the codebase grows.',
+  categoryStructuralRisk:
+      'Some structural boundaries could be clarified to reduce future refactor cost.',
+  categoryMaintainabilityRisk:
+      'A few files are on the larger side; splitting them may help as features grow.',
+  categoryConfigReleaseRisk:
+      'Some configuration is in code; externalizing it can ease releases and testing.',
+};
+
+/// Why-this-matters explanation per dominant category (standard intensity).
+final Map<String, String> categoryToWhyStandard = {
   categoryCouplingRisk:
       'Coupling and global access patterns reduce isolation, increasing coordination cost as the codebase grows.',
   categoryStructuralRisk:
@@ -63,4 +75,16 @@ final Map<String, String> categoryToWhyItMatters = {
       'Oversized files and unclear responsibility distribution increase review time and merge conflicts. Breaking them down early keeps feature delivery predictable.',
   categoryConfigReleaseRisk:
       'Hardcoded configuration ties the app to specific environments and makes releases and testing brittle. Externalizing config reduces release and environment risk.',
+};
+
+/// Softer why-this-matters explanation (when score >= 90 or totalPenalty <= 8).
+final Map<String, String> categoryToWhySoft = {
+  categoryCouplingRisk:
+      'Minor coupling and global access patterns can reduce isolation over time; watching feature boundaries helps keep coordination cost manageable as the codebase grows.',
+  categoryStructuralRisk:
+      'Minor boundary erosion reduces isolation over time; keeping layers clean helps prevent refactor complexity as the project grows.',
+  categoryMaintainabilityRisk:
+      'A few larger files can increase review time and merge risk; splitting them early helps keep feature delivery predictable.',
+  categoryConfigReleaseRisk:
+      'Some configuration in code can tie the app to environments and make testing harder; externalizing it eases releases and reduces environment risk.',
 };

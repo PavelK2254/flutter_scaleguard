@@ -2,6 +2,7 @@ import 'category_aggregation.dart';
 import 'finding.dart';
 import 'risk_level.dart';
 import 'rule_result.dart';
+import 'scan_meta.dart';
 
 class ScanReport {
   const ScanReport({
@@ -12,6 +13,7 @@ class ScanReport {
     required this.timestamp,
     this.projectPath,
     this.aggregation,
+    this.meta,
   });
 
   final int score;
@@ -22,6 +24,7 @@ class ScanReport {
   final DateTime timestamp;
   final String? projectPath;
   final CategoryAggregation? aggregation;
+  final ScanMeta? meta;
 
   List<Finding> get findings {
     final list = <Finding>[];

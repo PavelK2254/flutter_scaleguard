@@ -1,3 +1,4 @@
+import '../core/path_utils.dart' as path_utils;
 import '../core/rule_metadata.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
@@ -9,9 +10,12 @@ import '../version.dart';
 class ConsoleRenderer {
   ConsoleRenderer._();
 
+  static const int _softPenaltyThreshold = 8;
+
   /// Renders [report] to the console. [version] should come from [getPackageVersion]
   /// so the banner matches pubspec; if null, uses [fallbackPackageVersion].
-  static void render(ScanReport report, {String? version}) {
+  /// When [showStats] is true and report has meta, prints Scan Stats section.
+  static void render(ScanReport report, {String? version, bool showStats = false}) {
     final v = version ?? fallbackPackageVersion;
     final versionLabel = v.startsWith('v') ? v : 'v$v';
     print('Flutter ScaleGuard $versionLabel');
@@ -23,7 +27,10 @@ class ConsoleRenderer {
 
     final agg = report.aggregation;
     if (agg != null) {
-      final summary = categoryToSummary[agg.dominantCategory] ??
+      final useSoft = report.score >= 90 ||
+          (agg.totalPenalty <= _softPenaltyThreshold && agg.totalPenalty > 0);
+      final summaries = useSoft ? categoryToSummarySoft : categoryToSummary;
+      final summary = summaries[agg.dominantCategory] ??
           'No dominant risk category.';
       print('Summary:');
       print(summary);
@@ -35,8 +42,10 @@ class ConsoleRenderer {
                   .round()
               : 0)
           : 0;
-      print(
-          'Dominant Risk Category: ${agg.dominantCategory} ($pct% of total penalty)');
+      final dominantSuffix = agg.totalPenalty <= _softPenaltyThreshold
+          ? ' ($pct% of total penalty, low intensity)'
+          : ' ($pct% of total penalty)';
+      print('Dominant Risk Category: ${agg.dominantCategory}$dominantSuffix');
       final displayName = ruleIdToDisplayLabel[agg.mostExpensiveRuleId] ??
           agg.mostExpensiveRuleId;
       final mostExpCategory =
@@ -77,9 +86,11 @@ class ConsoleRenderer {
       _printTopHotspots(report);
       print('---');
       print('');
-      final why = categoryToWhyItMatters[agg.dominantCategory] ?? '';
+      final whyMap = useSoft ? categoryToWhySoft : categoryToWhyStandard;
+      final why = whyMap[agg.dominantCategory] ?? '';
       print('Why This Matters');
       print(why);
+      if (showStats && report.meta != null) _printScanStats(report);
     } else {
       final findings = report.findings;
       if (findings.isEmpty) {
@@ -101,7 +112,18 @@ class ConsoleRenderer {
           print('');
         }
       }
+      if (showStats && report.meta != null) _printScanStats(report);
     }
+  }
+
+  static void _printScanStats(ScanReport report) {
+    final m = report.meta!;
+    print('');
+    print('Scan Stats');
+    print(
+        'Files scanned: ${m.scannedFiles} (${m.ignoredFiles} ignored)');
+    print(
+        'Imports: ${m.importsResolvedToProject}/${m.importsTotal} resolved | ${m.importsExternalPackage} external | ${m.importsUnresolved} unresolved');
   }
 
   static const int _maxEvidenceLength = 80;
@@ -266,7 +288,7 @@ class ConsoleRenderer {
   /// Normalizes separators (\\ -> /). If path contains "lib/features/",
   /// returns "lib/features/<featureName>" where featureName is the segment after lib/features/ until next '/'. Else returns null.
   static String? extractFeaturePathFromFilePath(String filePath) {
-    final norm = filePath.replaceAll(r'\', '/');
+    final norm = path_utils.normalizePath(filePath);
     const prefix = 'lib/features/';
     if (!norm.contains(prefix)) return null;
     final idx = norm.indexOf(prefix) + prefix.length;
@@ -285,7 +307,7 @@ class ConsoleRenderer {
 
   /// Fallback when [extractFeaturePathFromFilePath] returns null: lib/<topFolder> or "other".
   static String _fallbackKey(String path) {
-    final norm = path.replaceAll(r'\', '/');
+    final norm = path_utils.normalizePath(path);
     final segments = norm.split('/');
     if (segments.length >= 3 &&
         segments[0] == 'lib' &&
@@ -299,7 +321,7 @@ class ConsoleRenderer {
   }
 
   /// Normalize path separators for deterministic comparison and extraction.
-  static String _normPath(String p) => p.replaceAll(r'\', '/');
+  static String _normPath(String p) => path_utils.normalizePath(p);
 
   /// Source hotspot key: extract from [Finding.file] only (no imported path or message).
   /// Uses normalized path so keys are deterministic across platforms.

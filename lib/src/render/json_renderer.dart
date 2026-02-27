@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../model/finding.dart';
 import '../model/risk_level.dart';
 import '../model/rule_result.dart';
+import '../model/scan_meta.dart';
 import '../model/scan_report.dart';
 import '../model/severity.dart';
 
@@ -17,10 +18,27 @@ class JsonRenderer {
       'findings': report.findings.map(_findingToMap).toList(),
       'ruleResults': report.ruleResults.map(_ruleResultToMap).toList(),
     };
+    if (report.meta != null) {
+      map['meta'] = _metaToMap(report.meta!);
+    }
     if (report.projectPath != null) {
       map['projectPath'] = report.projectPath!;
     }
     return const JsonEncoder.withIndent('  ').convert(map);
+  }
+
+  static Map<String, Object> _metaToMap(ScanMeta meta) {
+    return <String, Object>{
+      'schemaVersion': meta.schemaVersion,
+      'scannedFiles': meta.scannedFiles,
+      'ignoredFiles': meta.ignoredFiles,
+      'imports': <String, Object>{
+        'total': meta.importsTotal,
+        'resolvedToProject': meta.importsResolvedToProject,
+        'externalPackage': meta.importsExternalPackage,
+        'unresolved': meta.importsUnresolved,
+      },
+    };
   }
 
   static String _riskLevelString(RiskLevel level) {
