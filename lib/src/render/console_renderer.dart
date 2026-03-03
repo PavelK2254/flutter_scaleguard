@@ -1,3 +1,4 @@
+import '../core/module_root.dart';
 import '../core/path_utils.dart' as path_utils;
 import '../core/rule_metadata.dart';
 import '../model/category_aggregation.dart';
@@ -64,7 +65,7 @@ class ConsoleRenderer {
         final sourceCountByKey = <String, int>{};
         final targetCountByKey = <String, int>{};
         for (final f in forRule) {
-          final sk = getSourceHotspotKey(f);
+          final sk = getSourceHotspotKey(f, report);
           sourceCountByKey[sk] = (sourceCountByKey[sk] ?? 0) + 1;
           final tk = getTargetHotspotKey(f);
           if (tk != null && tk.isNotEmpty) {
@@ -196,9 +197,9 @@ class ConsoleRenderer {
     final examples = <Finding>[];
     if (topSourceHotspotKey != null) {
       final matching =
-          forRule.where((f) => getSourceHotspotKey(f) == topSourceHotspotKey);
+          forRule.where((f) => getSourceHotspotKey(f, report) == topSourceHotspotKey);
       final rest =
-          forRule.where((f) => getSourceHotspotKey(f) != topSourceHotspotKey);
+          forRule.where((f) => getSourceHotspotKey(f, report) != topSourceHotspotKey);
       for (final f in matching) {
         if (seenFiles.add(f.file)) {
           examples.add(f);
@@ -254,7 +255,7 @@ class ConsoleRenderer {
     final more = forRule.length - examples.length;
     if (more > 0) print('  (+$more more)');
     if (topSourceHotspotKey != null &&
-        examples.any((f) => getSourceHotspotKey(f) != topSourceHotspotKey)) {
+        examples.any((f) => getSourceHotspotKey(f, report) != topSourceHotspotKey)) {
       print(
           '(Note: hotspot/example mismatch detected — verify feature extraction)');
     }
@@ -286,57 +287,23 @@ class ConsoleRenderer {
     }
   }
 
-  /// Shared feature path extraction from a file path.
-  /// Normalizes separators (\\ -> /). If path contains "lib/features/",
-  /// returns "lib/features/<featureName>" where featureName is the segment after lib/features/ until next '/'. Else returns null.
-  static String? extractFeaturePathFromFilePath(String filePath) {
-    final norm = path_utils.normalizePath(filePath);
-    const prefix = 'lib/features/';
-    if (!norm.contains(prefix)) return null;
-    final idx = norm.indexOf(prefix) + prefix.length;
-    final rest = norm.substring(idx);
-    final nextSlash = rest.indexOf('/');
-    final featureName =
-        nextSlash < 0 ? rest : rest.substring(0, nextSlash);
-    if (featureName.isEmpty) return null;
-    return 'lib/features/$featureName';
-  }
-
-  /// Same logic as [extractFeaturePathFromFilePath] for imported resolved paths.
-  static String? extractFeaturePathFromImportPath(String importedResolvedPath) {
-    return extractFeaturePathFromFilePath(importedResolvedPath);
-  }
-
-  /// Fallback when [extractFeaturePathFromFilePath] returns null: lib/<topFolder> or "other".
-  static String _fallbackKey(String path) {
-    final norm = path_utils.normalizePath(path);
-    final segments = norm.split('/');
-    if (segments.length >= 3 &&
-        segments[0] == 'lib' &&
-        segments[1] == 'features') {
-      return 'lib/features/${segments[2]}';
-    }
-    if (segments.length >= 2) {
-      return 'lib/${segments[1]}';
-    }
-    return segments.isNotEmpty && segments[0] == 'lib' ? 'lib' : 'other';
-  }
-
   /// Normalize path separators for deterministic comparison and extraction.
   static String _normPath(String p) => path_utils.normalizePath(p);
 
-  /// Source hotspot key: extract from [Finding.file] only (no imported path or message).
-  /// Uses normalized path so keys are deterministic across platforms.
-  static String getSourceHotspotKey(Finding f) {
+  /// Source hotspot key from [Finding.file]. Uses [report.moduleIndex] when present,
+  /// otherwise [moduleRootKey] on normalized path. Deterministic across platforms.
+  static String getSourceHotspotKey(Finding f, ScanReport report) {
     final norm = _normPath(f.file);
-    return extractFeaturePathFromFilePath(norm) ?? _fallbackKey(norm);
+    return report.moduleIndex?[norm] ?? moduleRootKey(norm);
   }
 
-  /// Target hotspot key from [Finding.resolvedImportedPath]. Returns null if none.
+  /// Target hotspot key from [Finding.resolvedImportedPath]. Returns null if none or external.
   static String? getTargetHotspotKey(Finding f) {
     final path = f.resolvedImportedPath;
     if (path == null || path.isEmpty) return null;
-    return extractFeaturePathFromImportPath(path);
+    final norm = _normPath(path);
+    if (!norm.startsWith('lib/')) return null;
+    return moduleRootKey(norm);
   }
 
   static void _printTopHotspots(ScanReport report) {
@@ -349,7 +316,7 @@ class ConsoleRenderer {
     final countByKey = <String, int>{};
     final ruleCountByKey = <String, Map<String, int>>{};
     for (final f in findings) {
-      final key = getSourceHotspotKey(f);
+      final key = getSourceHotspotKey(f, report);
       countByKey[key] = (countByKey[key] ?? 0) + 1;
       ruleCountByKey[key] ??= {};
       ruleCountByKey[key]![f.ruleId] = (ruleCountByKey[key]![f.ruleId] ?? 0) + 1;

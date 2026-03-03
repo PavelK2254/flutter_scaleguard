@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'config.dart';
 import 'index.dart';
+import 'module_root.dart';
 import 'path_utils.dart' as path_utils;
 import 'rule_metadata.dart';
 import '../model/category_aggregation.dart';
@@ -26,7 +27,7 @@ final _exportRegex = RegExp(r'''export\s+['"]([^'"]+)['"]''');
 final _importCache = <String, String?>{};
 
 /// Builds index and scan meta. For index-only use, call [buildIndex] instead.
-Future<({ProjectIndex index, ScanMeta meta})> buildIndexWithMeta(
+Future<({ProjectIndex index, ScanMeta meta, Map<String, String> moduleIndex})> buildIndexWithMeta(
     String projectPath, ScannerConfig config,
     {bool includeLines = true}) async {
   final libDir = Directory('$projectPath/lib');
@@ -42,6 +43,7 @@ Future<({ProjectIndex index, ScanMeta meta})> buildIndexWithMeta(
         importsExternalPackage: 0,
         importsUnresolved: 0,
       ),
+      moduleIndex: <String, String>{},
     );
   }
   _importCache.clear();
@@ -90,9 +92,14 @@ Future<({ProjectIndex index, ScanMeta meta})> buildIndexWithMeta(
     importsExternalPackage: externalPackage,
     importsUnresolved: unresolved,
   );
+  final moduleIndex = <String, String>{
+    for (final f in files)
+      path_utils.normalizePath(f.path): moduleRootKey(path_utils.normalizePath(f.path)),
+  };
   return (
     index: ProjectIndex(files: files, packageName: packageName),
     meta: meta,
+    moduleIndex: moduleIndex,
   );
 }
 
@@ -195,7 +202,7 @@ List<Rule> get defaultRules => [
 Future<ScanReport> runScan(String projectPath,
     {ScannerConfig? config, List<Rule>? rules}) async {
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
-  final (:index, :meta) = await buildIndexWithMeta(projectPath, resolvedConfig);
+  final (:index, :meta, :moduleIndex) = await buildIndexWithMeta(projectPath, resolvedConfig);
   final ruleList = rules ?? defaultRules;
   final results = <RuleResult>[];
   for (final rule in ruleList) {
@@ -217,6 +224,7 @@ Future<ScanReport> runScan(String projectPath,
     projectPath: projectPath,
     aggregation: aggregation,
     meta: meta,
+    moduleIndex: moduleIndex,
   );
 }
 
