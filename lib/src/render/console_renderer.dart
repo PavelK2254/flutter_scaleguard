@@ -12,6 +12,9 @@ class ConsoleRenderer {
   ConsoleRenderer._();
 
   static const int _softPenaltyThreshold = 8;
+  static const Set<String> _rulesWithTargetHotspot = {
+    'cross_feature_coupling',
+  };
 
   /// Renders [report] to the console. [version] should come from [getPackageVersion]
   /// so the banner matches pubspec; if null, uses [fallbackPackageVersion].
@@ -63,17 +66,21 @@ class ConsoleRenderer {
       (String, int)? targetTop;
       if (forRule.isNotEmpty) {
         final sourceCountByKey = <String, int>{};
-        final targetCountByKey = <String, int>{};
+        Map<String, int>? targetCountByKey;
+        final hasTargetHotspot = _rulesWithTargetHotspot.contains(ruleId);
         for (final f in forRule) {
           final sk = getSourceHotspotKey(f, report);
           sourceCountByKey[sk] = (sourceCountByKey[sk] ?? 0) + 1;
-          final tk = getTargetHotspotKey(f);
-          if (tk != null && tk.isNotEmpty) {
-            targetCountByKey[tk] = (targetCountByKey[tk] ?? 0) + 1;
+          if (hasTargetHotspot) {
+            final tk = getTargetHotspotKey(f);
+            if (tk != null && tk.isNotEmpty) {
+              targetCountByKey ??= <String, int>{};
+              targetCountByKey[tk] = (targetCountByKey[tk] ?? 0) + 1;
+            }
           }
         }
         sourceTop = _topHotspotEntry(sourceCountByKey);
-        targetTop = targetCountByKey.isNotEmpty
+        targetTop = hasTargetHotspot && targetCountByKey != null && targetCountByKey.isNotEmpty
             ? _topHotspotEntry(targetCountByKey)
             : null;
       }
@@ -171,6 +178,17 @@ class ConsoleRenderer {
     return (e.key, e.value);
   }
 
+  /// Ordered hotspot keys by count desc then key asc.
+  static List<String> _orderedSourceHotspotKeys(Map<String, int> countByKey) {
+    final entries = countByKey.entries.toList()
+      ..sort((a, b) {
+        final byCount = b.value.compareTo(a.value);
+        if (byCount != 0) return byCount;
+        return a.key.compareTo(b.key);
+      });
+    return [for (final e in entries) e.key];
+  }
+
   static void _printMostExpensiveExamples(
     ScanReport report,
     String ruleId, {
@@ -180,6 +198,7 @@ class ConsoleRenderer {
         .where((f) => f.ruleId == ruleId)
         .toList();
     if (forRule.isEmpty) return;
+    // Deterministic ordering within a rule: severity desc, file asc, line asc, resolvedImportedPath asc.
     forRule.sort((a, b) {
       final sev = b.severity.index.compareTo(a.severity.index);
       if (sev != 0) return sev;
@@ -193,35 +212,36 @@ class ConsoleRenderer {
       final resB = b.resolvedImportedPath ?? '';
       return resA.compareTo(resB);
     });
+
+    // Count findings per source hotspot key for this rule.
+    final sourceCountByKey = <String, int>{};
+    for (final f in forRule) {
+      final key = getSourceHotspotKey(f, report);
+      sourceCountByKey[key] = (sourceCountByKey[key] ?? 0) + 1;
+    }
+    const maxExamples = 3;
     final seenFiles = <String>{};
     final examples = <Finding>[];
-    if (topSourceHotspotKey != null) {
-      final matching =
-          forRule.where((f) => getSourceHotspotKey(f, report) == topSourceHotspotKey);
-      final rest =
-          forRule.where((f) => getSourceHotspotKey(f, report) != topSourceHotspotKey);
-      for (final f in matching) {
-        if (seenFiles.add(f.file)) {
-          examples.add(f);
-          if (examples.length >= 3) break;
-        }
-      }
-      if (examples.length < 3) {
-        for (final f in rest) {
-          if (seenFiles.add(f.file)) {
-            examples.add(f);
-            if (examples.length >= 3) break;
-          }
-        }
-      }
+    // Determine the primary hotspot key to use for examples.
+    String? primaryKey;
+    if (topSourceHotspotKey != null &&
+        sourceCountByKey.containsKey(topSourceHotspotKey)) {
+      primaryKey = topSourceHotspotKey;
     } else {
-      for (final f in forRule) {
-        if (seenFiles.add(f.file)) {
-          examples.add(f);
-          if (examples.length >= 3) break;
-        }
+      final orderedKeys = _orderedSourceHotspotKeys(sourceCountByKey);
+      if (orderedKeys.isNotEmpty) {
+        primaryKey = orderedKeys.first;
       }
     }
+    if (primaryKey != null) {
+      for (final f in forRule) {
+        if (getSourceHotspotKey(f, report) != primaryKey) continue;
+        if (!seenFiles.add(f.file)) continue;
+        examples.add(f);
+        if (examples.length >= maxExamples) break;
+      }
+    }
+
     print('Examples:');
     for (final f in examples) {
       final loc = f.line != null ? ':${f.line}' : '';
@@ -254,11 +274,6 @@ class ConsoleRenderer {
     }
     final more = forRule.length - examples.length;
     if (more > 0) print('  (+$more more)');
-    if (topSourceHotspotKey != null &&
-        examples.any((f) => getSourceHotspotKey(f, report) != topSourceHotspotKey)) {
-      print(
-          '(Note: hotspot/example mismatch detected — verify feature extraction)');
-    }
   }
 
   static void _printFindingsByCategory(

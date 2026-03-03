@@ -126,11 +126,11 @@ void main() {
       );
     });
 
-    test('mismatch note when examples include findings from non-hotspot feature',
+    test('when top hotspot has only 2 findings and N=3, only 2 examples from that hotspot are shown',
         () {
-      // Top source: achievements with 4 findings but only 2 unique files.
-      // habit_details has 2 findings (2 files). So we take 2 from achievements,
-      // then 1 from habit_details -> one example has different source -> mismatch.
+      // Top source: achievements with 2 findings (2 files).
+      // habit_details has 2 findings (2 files). We should show only the 2 achievements examples,
+      // and none from habit_details, even though N=3.
       final findings = [
         Finding(
           severity: FindingSeverity.high,
@@ -200,17 +200,31 @@ void main() {
       );
       final lines = capturePrint(() => ConsoleRenderer.render(report));
 
-      // achievements has 2 findings, habit_details has 2. Tie-break: alphabetical -> achievements.
       expect(
         lines.any((l) => l.startsWith('Hotspot (source): lib/features/achievements')),
         isTrue,
       );
-      // We have 2 unique files in achievements, 2 in habit_details. We take 2 from achievements, then 1 from habit_details.
-      // So one example is from habit_details -> mismatch.
+      final examplesStart =
+          lines.indexWhere((l) => l == 'Examples:');
+      expect(examplesStart, greaterThanOrEqualTo(0));
+      final exampleLines = lines
+          .skip(examplesStart + 1)
+          .take(5)
+          .where((l) => l.trimLeft().startsWith('lib/'))
+          .toList();
+      // Only the two achievements findings should be used as examples.
+      expect(exampleLines.length, 2);
+      for (final line in exampleLines) {
+        if (line.contains('(+')) break;
+        expect(
+          line.contains('lib/features/achievements/'),
+          isTrue,
+        );
+      }
       expect(
         lines.any((l) => l.contains('hotspot/example mismatch detected')),
-        isTrue,
-        reason: 'Mismatch note when an example is from a non-hotspot feature',
+        isFalse,
+        reason: 'Mismatch note is no longer used',
       );
     });
   });
@@ -389,6 +403,112 @@ void main() {
       // Must NOT collapse to a single "lib/feature (" line.
       final coarseLine = topHotspotsBlock.where((l) => l.startsWith('lib/feature (') && !l.startsWith('lib/feature/'));
       expect(coarseLine.length, 0, reason: 'Hotspots must be module-level, not coarse lib/feature');
+    });
+  });
+
+  group('Most Expensive Risk examples for layer_violations', () {
+    List<String> capturePrint(void Function() body) {
+      final lines = <String>[];
+      runZoned(body,
+          zoneSpecification: ZoneSpecification(
+            print: (self, parent, zone, line) => lines.add(line),
+          ));
+      return lines;
+    }
+
+    test('examples are from main_flow and no target hotspot is printed', () {
+      final findings = [
+        Finding(
+          severity: FindingSeverity.high,
+          ruleId: 'layer_violations',
+          file: 'lib/feature/main_flow/presentation/page_a.dart',
+          message: 'layer violation A',
+        ),
+        Finding(
+          severity: FindingSeverity.medium,
+          ruleId: 'layer_violations',
+          file: 'lib/feature/main_flow/domain/use_case_b.dart',
+          message: 'layer violation B',
+        ),
+        Finding(
+          severity: FindingSeverity.medium,
+          ruleId: 'layer_violations',
+          file: 'lib/feature/main_flow/data/repo_d.dart',
+          message: 'layer violation D',
+        ),
+        Finding(
+          severity: FindingSeverity.medium,
+          ruleId: 'layer_violations',
+          file: 'lib/feature/secondary_flow/presentation/page_c.dart',
+          message: 'layer violation C',
+        ),
+      ];
+      final moduleIndex = {
+        'lib/feature/main_flow/presentation/page_a.dart': 'lib/feature/main_flow',
+        'lib/feature/main_flow/domain/use_case_b.dart': 'lib/feature/main_flow',
+        'lib/feature/main_flow/data/repo_d.dart': 'lib/feature/main_flow',
+        'lib/feature/secondary_flow/presentation/page_c.dart': 'lib/feature/secondary_flow',
+      };
+      final results = [
+        RuleResult(
+          ruleId: 'layer_violations',
+          penalty: 10,
+          findings: findings,
+        ),
+        RuleResult(
+          ruleId: 'cross_feature_coupling',
+          penalty: 5,
+          findings: [],
+        ),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+        uniqueFindings: findings,
+      );
+      final report = ScanReport(
+        score: 70,
+        riskLevel: RiskLevel.medium,
+        ruleResults: results,
+        uniqueFindings: findings,
+        timestamp: DateTime.now().toUtc(),
+        aggregation: aggregation,
+        moduleIndex: moduleIndex,
+      );
+      final lines = capturePrint(() => ConsoleRenderer.render(report));
+
+      // Most Expensive Risk is layer_violations, hotspot should be main_flow.
+      expect(
+        lines.any((l) => l.startsWith('Most Expensive Risk:')),
+        isTrue,
+      );
+      expect(
+        lines.any((l) => l.startsWith('Hotspot (source): lib/feature/main_flow')),
+        isTrue,
+      );
+      // No target hotspot printed for layer_violations.
+      expect(
+        lines.any((l) => l.startsWith('Hotspot (target):')),
+        isFalse,
+      );
+
+      final examplesStart =
+          lines.indexWhere((l) => l == 'Examples:');
+      expect(examplesStart, greaterThanOrEqualTo(0));
+      final exampleLines = lines
+          .skip(examplesStart + 1)
+          .take(5)
+          .where((l) => l.trimLeft().startsWith('lib/'))
+          .toList();
+      expect(exampleLines, isNotEmpty);
+      for (final line in exampleLines) {
+        if (line.contains('(+')) break;
+        expect(
+          line.contains('lib/feature/main_flow/'),
+          isTrue,
+          reason: 'All examples should be from main_flow hotspot',
+        );
+      }
     });
   });
 }
