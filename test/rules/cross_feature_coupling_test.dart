@@ -81,52 +81,16 @@ void main() {
       final f = result.findings.first;
       expect(f.sourceFeaturePath, 'lib/features/achievements');
       expect(f.targetFeaturePath, 'lib/features/habits');
-      expect(ConsoleRenderer.getSourceHotspotKey(f), 'lib/features/achievements');
+      final report = ScanReport(
+        score: 0,
+        riskLevel: RiskLevel.low,
+        ruleResults: [result],
+        uniqueFindings: result.findings,
+        timestamp: DateTime.now().toUtc(),
+        moduleIndex: null,
+      );
+      expect(ConsoleRenderer.getSourceHotspotKey(f, report), 'lib/features/achievements');
       expect(ConsoleRenderer.getTargetHotspotKey(f), 'lib/features/habits');
-      // Consistency: example shows lib/features/achievements/... => source key is lib/features/achievements
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath(f.file),
-        'lib/features/achievements',
-      );
-    });
-  });
-
-  group('extractFeaturePathFromFilePath', () {
-    test('returns lib/features/<name> when path contains /lib/features/', () {
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath(
-            'lib/features/achievements/domain/use_case.dart'),
-        'lib/features/achievements',
-      );
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath(
-            'lib/features/habits/data/repo.dart'),
-        'lib/features/habits',
-      );
-    });
-
-    test('handles Windows-style paths (backslashes)', () {
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath(
-            r'lib\features\achievements\domain\foo.dart'),
-        'lib/features/achievements',
-      );
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath(
-            r'lib\features\habit_details\data\bar.dart'),
-        'lib/features/habit_details',
-      );
-    });
-
-    test('returns null when path does not contain /lib/features/', () {
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath('lib/other/foo.dart'),
-        isNull,
-      );
-      expect(
-        ConsoleRenderer.extractFeaturePathFromFilePath('lib/features.dart'),
-        isNull,
-      );
     });
   });
 }

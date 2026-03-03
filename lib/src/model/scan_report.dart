@@ -14,6 +14,7 @@ class ScanReport {
     this.projectPath,
     this.aggregation,
     this.meta,
+    this.moduleIndex,
   });
 
   final int score;
@@ -25,6 +26,8 @@ class ScanReport {
   final String? projectPath;
   final CategoryAggregation? aggregation;
   final ScanMeta? meta;
+  /// Map from normalized file path to module root key (e.g. lib/feature/add_card). Built during scan.
+  final Map<String, String>? moduleIndex;
 
   List<Finding> get findings {
     final list = <Finding>[];
