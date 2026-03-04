@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../model/category_aggregation.dart';
 import '../model/finding.dart';
 import '../model/risk_level.dart';
 import '../model/rule_result.dart';
@@ -24,7 +25,22 @@ class JsonRenderer {
     if (report.projectPath != null) {
       map['projectPath'] = report.projectPath!;
     }
+    if (report.aggregation != null) {
+      map['penalties'] = _penaltiesToMap(report.aggregation!);
+    }
     return const JsonEncoder.withIndent('  ').convert(map);
+  }
+
+  /// Penalties as positive magnitudes. byCategory keys in order: penalty desc, then name asc.
+  static Map<String, Object> _penaltiesToMap(CategoryAggregation aggregation) {
+    final byCategory = <String, Object>{};
+    for (final e in aggregation.penaltyByCategory.entries) {
+      byCategory[e.key] = e.value;
+    }
+    return <String, Object>{
+      'total': aggregation.totalPenalty,
+      'byCategory': byCategory,
+    };
   }
 
   static Map<String, Object> _metaToMap(ScanMeta meta) {

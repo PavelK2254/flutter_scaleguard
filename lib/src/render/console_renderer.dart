@@ -91,6 +91,7 @@ class ConsoleRenderer {
       print('---');
       print('');
       _printFindingsByCategory(report, agg);
+      _printPenaltyByCategory(agg);
       print('---');
       print('');
       _printTopHotspots(report);
@@ -300,6 +301,20 @@ class ConsoleRenderer {
       }
       print('');
     }
+  }
+
+  /// Prints penalty totals by category when [aggregation.totalPenalty] > 0.
+  /// Order: penalty desc, then name asc. Format: two decimals, negative (e.g. -12.25, -0.00).
+  static void _printPenaltyByCategory(CategoryAggregation aggregation) {
+    if (aggregation.totalPenalty <= 0) return;
+    print('Penalty by Category');
+    for (final e in aggregation.penaltyByCategory.entries) {
+      final value = e.value;
+      final formatted = value.toStringAsFixed(2);
+      print('${e.key}: -$formatted');
+    }
+    print('Total Penalty: -${aggregation.totalPenalty.toStringAsFixed(2)}');
+    print('');
   }
 
   /// Normalize path separators for deterministic comparison and extraction.
