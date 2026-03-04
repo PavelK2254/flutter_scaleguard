@@ -153,6 +153,11 @@ void main() {
       expect(agg.categoryScores.first.category, 'unknown_rule');
       expect(agg.dominantCategory, 'unknown_rule');
       expect(agg.mostExpensiveRuleId, 'unknown_rule');
+      expect(agg.penaltyByCategory['unknown_rule'], 3.0);
+      expect(
+        agg.penaltyByCategory.values.fold(0.0, (a, b) => a + b),
+        agg.totalPenalty,
+      );
     });
 
     test('uniqueFindings dedupes counts by fingerprint', () {

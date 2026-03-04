@@ -32,7 +32,9 @@ class CategoryAggregation {
   /// Sorted by totalPenalty descending, then category ascending.
   final List<CategoryScore> categoryScores;
 
-  /// Penalty total per canonical category (all four categories always present).
+  /// Penalty total per category. Always includes the four canonical categories;
+  /// may include additional non-canonical categories (e.g. when ruleId is used
+  /// as category). Sum of values equals [totalPenalty].
   /// Iteration order: penalty descending, then category name ascending.
   final Map<String, double> penaltyByCategory;
 
@@ -126,9 +128,11 @@ class CategoryAggregation {
         hasRisk && sortedByRule.isNotEmpty ? sortedByRule.first.penalty : 0.0;
     final effectiveScores = hasRisk ? categoryScores : <CategoryScore>[];
 
-    // Build penaltyByCategory with all four canonical categories (0.0 if absent).
+    // Build penaltyByCategory: four canonical categories always present, plus
+    // any non-canonical categories from categoryPenalty so sum reconciles with totalPenalty.
     // Order: penalty desc, then name asc for deterministic output.
-    final canonicalOrdered = List<String>.from(meta.allCategories)
+    final allKeys = <String>{...meta.allCategories, ...categoryPenalty.keys};
+    final orderedKeys = allKeys.toList()
       ..sort((a, b) {
         final pa = categoryPenalty[a] ?? 0.0;
         final pb = categoryPenalty[b] ?? 0.0;
@@ -137,7 +141,7 @@ class CategoryAggregation {
         return a.compareTo(b);
       });
     final penaltyByCategory = {
-      for (final k in canonicalOrdered) k: categoryPenalty[k] ?? 0.0,
+      for (final k in orderedKeys) k: categoryPenalty[k] ?? 0.0,
     };
 
     return CategoryAggregation(

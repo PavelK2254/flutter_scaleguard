@@ -10,17 +10,17 @@ const _ruleIdToCategory = {
   'layer_violations': 'Structural Risk',
 };
 
+List<String> _capturePrint(void Function() body) {
+  final lines = <String>[];
+  runZoned(body,
+      zoneSpecification: ZoneSpecification(
+        print: (self, parent, zone, line) => lines.add(line),
+      ));
+  return lines;
+}
+
 void main() {
   group('ConsoleRenderer hotspot/example consistency', () {
-    List<String> capturePrint(void Function() body) {
-      final lines = <String>[];
-      runZoned(body,
-          zoneSpecification: ZoneSpecification(
-            print: (self, parent, zone, line) => lines.add(line),
-          ));
-      return lines;
-    }
-
     test('Hotspot (source) and Examples come from same feature when possible',
         () {
       // Top source: achievements (4 findings). Examples should be 3 from achievements.
@@ -95,7 +95,7 @@ void main() {
         timestamp: DateTime.now().toUtc(),
         aggregation: aggregation,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
       expect(
         lines.any((l) => l.startsWith('Hotspot (source): lib/features/achievements')),
@@ -198,7 +198,7 @@ void main() {
         timestamp: DateTime.now().toUtc(),
         aggregation: aggregation,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
       expect(
         lines.any((l) => l.startsWith('Hotspot (source): lib/features/achievements')),
@@ -230,15 +230,6 @@ void main() {
   });
 
   group('Summary intensity (soft vs standard)', () {
-    List<String> capturePrint(void Function() body) {
-      final lines = <String>[];
-      runZoned(body,
-          zoneSpecification: ZoneSpecification(
-            print: (self, parent, zone, line) => lines.add(line),
-          ));
-      return lines;
-    }
-
     test('score 97 with small penalty uses soft summary', () {
       final results = [
         RuleResult(
@@ -267,7 +258,7 @@ void main() {
         timestamp: DateTime.now().toUtc(),
         aggregation: aggregation,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
       final fullOutput = lines.join('\n');
       expect(fullOutput, contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk]));
       expect(fullOutput, isNot(contains(meta.categoryToSummary[meta.categoryCouplingRisk])));
@@ -305,7 +296,7 @@ void main() {
         timestamp: DateTime.now().toUtc(),
         aggregation: aggregation,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
       final fullOutput = lines.join('\n');
       expect(fullOutput, contains(meta.categoryToSummary[meta.categoryCouplingRisk]));
       expect(fullOutput, isNot(contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk])));
@@ -317,15 +308,6 @@ void main() {
   });
 
   group('Top Hotspots module-level (lib/feature/<name>)', () {
-    List<String> capturePrint(void Function() body) {
-      final lines = <String>[];
-      runZoned(body,
-          zoneSpecification: ZoneSpecification(
-            print: (self, parent, zone, line) => lines.add(line),
-          ));
-      return lines;
-    }
-
     test('reports module-level hotspots not coarse lib/feature', () {
       // Fixture: findings under lib/feature/add_card, lib/feature/buy_gift_card, lib/feature/card_management.
       final findings = [
@@ -378,7 +360,7 @@ void main() {
         aggregation: aggregation,
         moduleIndex: moduleIndex,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
       final topHotspotsStart = lines.indexWhere((l) => l == 'Top Hotspots');
       expect(topHotspotsStart, greaterThanOrEqualTo(0));
@@ -407,15 +389,6 @@ void main() {
   });
 
   group('Most Expensive Risk examples for layer_violations', () {
-    List<String> capturePrint(void Function() body) {
-      final lines = <String>[];
-      runZoned(body,
-          zoneSpecification: ZoneSpecification(
-            print: (self, parent, zone, line) => lines.add(line),
-          ));
-      return lines;
-    }
-
     test('examples are from main_flow and no target hotspot is printed', () {
       final findings = [
         Finding(
@@ -475,7 +448,7 @@ void main() {
         aggregation: aggregation,
         moduleIndex: moduleIndex,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
       // Most Expensive Risk is layer_violations, hotspot should be main_flow.
       expect(
@@ -513,15 +486,6 @@ void main() {
   });
 
   group('Penalty by Category', () {
-    List<String> capturePrint(void Function() body) {
-      final lines = <String>[];
-      runZoned(body,
-          zoneSpecification: ZoneSpecification(
-            print: (self, parent, zone, line) => lines.add(line),
-          ));
-      return lines;
-    }
-
     test('prints penalty block with two decimals and deterministic order when totalPenalty > 0', () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
@@ -539,7 +503,7 @@ void main() {
         timestamp: DateTime.utc(2025, 1, 1),
         aggregation: aggregation,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
       expect(lines.any((l) => l == 'Penalty by Category'), isTrue);
       expect(lines.any((l) => l == 'Coupling Risk: -10.00'), isTrue);
       expect(lines.any((l) => l == 'Structural Risk: -1.00'), isTrue);
@@ -577,7 +541,7 @@ void main() {
         timestamp: DateTime.utc(2025, 1, 1),
         aggregation: aggregation,
       );
-      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
       expect(lines.any((l) => l == 'Penalty by Category'), isFalse);
     });
   });
