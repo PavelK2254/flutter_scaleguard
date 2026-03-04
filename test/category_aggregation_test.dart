@@ -19,6 +19,11 @@ void main() {
       expect(agg.dominantCategory, '');
       expect(agg.mostExpensiveRuleId, '');
       expect(agg.mostExpensivePenalty, 0.0);
+      expect(agg.penaltyByCategory.length, 4);
+      expect(agg.penaltyByCategory['Structural Risk'], 0.0);
+      expect(agg.penaltyByCategory['Coupling Risk'], 0.0);
+      expect(agg.penaltyByCategory['Maintainability Risk'], 0.0);
+      expect(agg.penaltyByCategory['Configuration / Release Risk'], 0.0);
     });
 
     test('all zero penalty yields empty aggregation (no risk signal)', () {
@@ -33,6 +38,9 @@ void main() {
       expect(agg.dominantCategory, '');
       expect(agg.mostExpensiveRuleId, '');
       expect(agg.mostExpensivePenalty, 0.0);
+      expect(agg.penaltyByCategory.length, 4);
+      expect(agg.penaltyByCategory['Structural Risk'], 0.0);
+      expect(agg.penaltyByCategory['Configuration / Release Risk'], 0.0);
     });
 
     test('single rule aggregates to one category', () {
@@ -67,6 +75,32 @@ void main() {
       expect(agg.dominantCategory, 'Structural Risk');
       expect(agg.mostExpensiveRuleId, 'layer_violations');
       expect(agg.mostExpensivePenalty, 10.0);
+      expect(agg.penaltyByCategory['Structural Risk'], 10.0);
+      expect(agg.penaltyByCategory['Coupling Risk'], 0.0);
+      expect(agg.penaltyByCategory['Maintainability Risk'], 0.0);
+      expect(agg.penaltyByCategory['Configuration / Release Risk'], 0.0);
+    });
+
+    test('penaltyByCategory has all four canonical keys, correct values, deterministic order', () {
+      final results = [
+        RuleResult(ruleId: 'god_files', penalty: 5, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+      ];
+      final agg =
+          CategoryAggregation.fromRuleResults(results, ruleIdToCategory);
+      expect(agg.totalPenalty, 25.0);
+      expect(agg.penaltyByCategory.length, 4);
+      expect(agg.penaltyByCategory['Structural Risk'], 10.0);
+      expect(agg.penaltyByCategory['Coupling Risk'], 10.0);
+      expect(agg.penaltyByCategory['Maintainability Risk'], 5.0);
+      expect(agg.penaltyByCategory['Configuration / Release Risk'], 0.0);
+      // Order: penalty desc, then name asc. So Coupling 10, Structural 10, Maintainability 5, Config 0.
+      final keys = agg.penaltyByCategory.keys.toList();
+      expect(keys[0], 'Coupling Risk');
+      expect(keys[1], 'Structural Risk');
+      expect(keys[2], 'Maintainability Risk');
+      expect(keys[3], 'Configuration / Release Risk');
     });
 
     test('category scores sorted by totalPenalty desc then category asc', () {

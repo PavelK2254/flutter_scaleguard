@@ -1,3 +1,4 @@
+import '../core/rule_metadata.dart' as meta;
 import 'finding.dart';
 import 'rule_result.dart';
 import 'severity.dart';
@@ -25,10 +26,15 @@ class CategoryAggregation {
     required this.mostExpensiveRuleId,
     required this.mostExpensivePenalty,
     required this.totalPenalty,
+    required this.penaltyByCategory,
   });
 
   /// Sorted by totalPenalty descending, then category ascending.
   final List<CategoryScore> categoryScores;
+
+  /// Penalty total per canonical category (all four categories always present).
+  /// Iteration order: penalty descending, then category name ascending.
+  final Map<String, double> penaltyByCategory;
 
   /// Category name with highest total penalty (ties: alphabetical).
   final String dominantCategory;
@@ -120,12 +126,27 @@ class CategoryAggregation {
         hasRisk && sortedByRule.isNotEmpty ? sortedByRule.first.penalty : 0.0;
     final effectiveScores = hasRisk ? categoryScores : <CategoryScore>[];
 
+    // Build penaltyByCategory with all four canonical categories (0.0 if absent).
+    // Order: penalty desc, then name asc for deterministic output.
+    final canonicalOrdered = List<String>.from(meta.allCategories)
+      ..sort((a, b) {
+        final pa = categoryPenalty[a] ?? 0.0;
+        final pb = categoryPenalty[b] ?? 0.0;
+        final byPenalty = pb.compareTo(pa);
+        if (byPenalty != 0) return byPenalty;
+        return a.compareTo(b);
+      });
+    final penaltyByCategory = {
+      for (final k in canonicalOrdered) k: categoryPenalty[k] ?? 0.0,
+    };
+
     return CategoryAggregation(
       categoryScores: effectiveScores,
       dominantCategory: dominantCategory,
       mostExpensiveRuleId: mostExpensiveRuleId,
       mostExpensivePenalty: mostExpensivePenalty,
       totalPenalty: totalPenalty,
+      penaltyByCategory: penaltyByCategory,
     );
   }
 }

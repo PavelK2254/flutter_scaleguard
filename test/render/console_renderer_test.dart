@@ -511,4 +511,74 @@ void main() {
       }
     });
   });
+
+  group('Penalty by Category', () {
+    List<String> capturePrint(void Function() body) {
+      final lines = <String>[];
+      runZoned(body,
+          zoneSpecification: ZoneSpecification(
+            print: (self, parent, zone, line) => lines.add(line),
+          ));
+      return lines;
+    }
+
+    test('prints penalty block with two decimals and deterministic order when totalPenalty > 0', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 89,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+      );
+      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      expect(lines.any((l) => l == 'Penalty by Category'), isTrue);
+      expect(lines.any((l) => l == 'Coupling Risk: -10.00'), isTrue);
+      expect(lines.any((l) => l == 'Structural Risk: -1.00'), isTrue);
+      expect(lines.any((l) => l == 'Maintainability Risk: -0.00'), isTrue);
+      expect(lines.any((l) => l == 'Configuration / Release Risk: -0.00'), isTrue);
+      expect(lines.any((l) => l == 'Total Penalty: -11.00'), isTrue);
+      final blockStart = lines.indexWhere((l) => l == 'Penalty by Category');
+      expect(blockStart, greaterThanOrEqualTo(0));
+      final categoryLines = lines
+          .skip(blockStart + 1)
+          .take(4)
+          .where((l) => l.contains(': -'))
+          .toList();
+      expect(categoryLines.length, 4);
+      expect(categoryLines[0], 'Coupling Risk: -10.00');
+      expect(categoryLines[1], 'Structural Risk: -1.00');
+      expect(categoryLines[2], 'Configuration / Release Risk: -0.00');
+      expect(categoryLines[3], 'Maintainability Risk: -0.00');
+    });
+
+    test('does not print penalty block when totalPenalty == 0', () {
+      final results = [
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 0, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 100,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+      );
+      final lines = capturePrint(() => ConsoleRenderer.render(report));
+      expect(lines.any((l) => l == 'Penalty by Category'), isFalse);
+    });
+  });
 }
