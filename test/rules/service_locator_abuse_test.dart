@@ -63,5 +63,26 @@ void main() {
       final result = rule.run(index, config);
       expect(result.findings, isEmpty);
     });
+
+    test('penalty is clamped at cap (14) when many findings', () {
+      final lines = List.generate(
+        100,
+        (i) => "  final x$i = GetIt.I.get<Object>();",
+      );
+      final index = ProjectIndex(
+        files: [
+          IndexedFile(
+            path: 'lib/features/auth/presentation/page.dart',
+            lineCount: lines.length,
+            imports: [],
+            lines: lines,
+          ),
+        ],
+      );
+      final result = rule.run(index, config);
+      expect(result.findings.length, 100);
+      expect(result.riskValue, 100.0);
+      expect(result.penalty, 14.0);
+    });
   });
 }

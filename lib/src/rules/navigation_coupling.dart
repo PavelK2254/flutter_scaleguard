@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/rule_metadata.dart';
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -11,10 +12,10 @@ class NavigationCouplingRule implements Rule {
   String get id => 'navigation_coupling';
 
   @override
-  double get weight => 0.05;
+  double get weight => ruleIdToWeight[id]!;
 
   @override
-  double get cap => 5;
+  double get cap => ruleIdToCap[id]!;
 
   static final _pushNamedRegex =
       RegExp(r'''pushNamed\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]''');

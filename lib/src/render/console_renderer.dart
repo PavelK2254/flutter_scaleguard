@@ -1,3 +1,4 @@
+import '../core/hotspot_utils.dart';
 import '../core/module_root.dart';
 import '../core/path_utils.dart' as path_utils;
 import '../core/rule_metadata.dart';
@@ -69,7 +70,7 @@ class ConsoleRenderer {
         Map<String, int>? targetCountByKey;
         final hasTargetHotspot = _rulesWithTargetHotspot.contains(ruleId);
         for (final f in forRule) {
-          final sk = getSourceHotspotKey(f, report);
+          final sk = HotspotUtils.getSourceHotspotKey(f, report);
           sourceCountByKey[sk] = (sourceCountByKey[sk] ?? 0) + 1;
           if (hasTargetHotspot) {
             final tk = getTargetHotspotKey(f);
@@ -217,7 +218,7 @@ class ConsoleRenderer {
     // Count findings per source hotspot key for this rule.
     final sourceCountByKey = <String, int>{};
     for (final f in forRule) {
-      final key = getSourceHotspotKey(f, report);
+      final key = HotspotUtils.getSourceHotspotKey(f, report);
       sourceCountByKey[key] = (sourceCountByKey[key] ?? 0) + 1;
     }
     const maxExamples = 3;
@@ -236,7 +237,7 @@ class ConsoleRenderer {
     }
     if (primaryKey != null) {
       for (final f in forRule) {
-        if (getSourceHotspotKey(f, report) != primaryKey) continue;
+        if (HotspotUtils.getSourceHotspotKey(f, report) != primaryKey) continue;
         if (!seenFiles.add(f.file)) continue;
         examples.add(f);
         if (examples.length >= maxExamples) break;
@@ -320,12 +321,9 @@ class ConsoleRenderer {
   /// Normalize path separators for deterministic comparison and extraction.
   static String _normPath(String p) => path_utils.normalizePath(p);
 
-  /// Source hotspot key from [Finding.file]. Uses [report.moduleIndex] when present,
-  /// otherwise [moduleRootKey] on normalized path. Deterministic across platforms.
-  static String getSourceHotspotKey(Finding f, ScanReport report) {
-    final norm = _normPath(f.file);
-    return report.moduleIndex?[norm] ?? moduleRootKey(norm);
-  }
+  /// Source hotspot key; delegates to [HotspotUtils.getSourceHotspotKey].
+  static String getSourceHotspotKey(Finding f, ScanReport report) =>
+      HotspotUtils.getSourceHotspotKey(f, report);
 
   /// Target hotspot key from [Finding.resolvedImportedPath]. Returns null if none or external.
   static String? getTargetHotspotKey(Finding f) {
@@ -339,27 +337,17 @@ class ConsoleRenderer {
   static void _printTopHotspots(ScanReport report) {
     print('Top Hotspots');
     print('');
-    final findings = report.uniqueFindings;
-    if (findings.isEmpty) {
-      return;
-    }
-    final countByKey = <String, int>{};
+    final ordered = HotspotUtils.getOrderedHotspotEntries(report);
+    if (ordered.isEmpty) return;
     final ruleCountByKey = <String, Map<String, int>>{};
-    for (final f in findings) {
-      final key = getSourceHotspotKey(f, report);
-      countByKey[key] = (countByKey[key] ?? 0) + 1;
+    for (final f in report.uniqueFindings) {
+      final key = HotspotUtils.getSourceHotspotKey(f, report);
       ruleCountByKey[key] ??= {};
       ruleCountByKey[key]![f.ruleId] = (ruleCountByKey[key]![f.ruleId] ?? 0) + 1;
     }
-    final entries = countByKey.entries.toList()
-      ..sort((a, b) {
-        final byCount = b.value.compareTo(a.value);
-        if (byCount != 0) return byCount;
-        return a.key.compareTo(b.key);
-      });
-    final top3 = entries.take(3).toList();
+    final top3 = ordered.take(3).toList();
     for (final e in top3) {
-      final ruleCounts = ruleCountByKey[e.key]!;
+      final ruleCounts = ruleCountByKey[e.path] ?? {};
       final topRules = ruleCounts.entries.toList()
         ..sort((a, b) {
           final byCount = b.value.compareTo(a.value);
@@ -370,7 +358,7 @@ class ConsoleRenderer {
       final rulePart = top2.isEmpty
           ? ''
           : ' — ${top2.map((r) => '${r.key}: ${r.value}').join(', ')}';
-      print('${e.key} (${e.value} findings)$rulePart');
+      print('${e.path} (${e.count} findings)$rulePart');
     }
   }
 
