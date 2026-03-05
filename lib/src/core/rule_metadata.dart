@@ -23,6 +23,28 @@ final Map<String, String> ruleIdToCategory = {
   'navigation_coupling': categoryCouplingRisk,
 };
 
+/// Maps each rule id to its weight (for JSON cap-hit reporting only).
+final Map<String, double> ruleIdToWeight = {
+  'cross_feature_coupling': 0.2,
+  'layer_violations': 0.25,
+  'shared_boundary_leakage': 0.1,
+  'god_files': 0.15,
+  'service_locator_abuse': 0.18,
+  'hardcoded_scale_risks': 0.1,
+  'navigation_coupling': 0.05,
+};
+
+/// Maps each rule id to its cap (for JSON cap-hit reporting only).
+final Map<String, double> ruleIdToCap = {
+  'cross_feature_coupling': 15,
+  'layer_violations': 20,
+  'shared_boundary_leakage': 10,
+  'god_files': 12,
+  'service_locator_abuse': 14,
+  'hardcoded_scale_risks': 10,
+  'navigation_coupling': 5,
+};
+
 /// Display labels for CLI output (business-relevant, impact-aware).
 final Map<String, String> ruleIdToDisplayLabel = {
   'cross_feature_coupling':

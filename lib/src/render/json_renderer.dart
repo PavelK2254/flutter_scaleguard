@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../core/hotspot_utils.dart';
+import '../core/rule_metadata.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
 import '../model/risk_level.dart';
@@ -28,7 +30,9 @@ class JsonRenderer {
     if (report.aggregation != null) {
       map['penalties'] =
           _penaltiesToMap(report.aggregation!, report.ruleResults);
+      map['capHits'] = _capHitsList(report.ruleResults);
     }
+    map['hotspotMetrics'] = _hotspotMetricsToMap(report);
     return const JsonEncoder.withIndent('  ').convert(map);
   }
 
@@ -64,6 +68,47 @@ class JsonRenderer {
       'total': aggregation.totalPenalty,
       'byCategory': byCategory,
       'byRule': byRule,
+    };
+  }
+
+  /// Rule ids where rawPenalty > cap and final penalty == cap. Sorted ascending for determinism.
+  static List<String> _capHitsList(List<RuleResult> ruleResults) {
+    final hitIds = <String>[];
+    for (final r in ruleResults) {
+      final weight = ruleIdToWeight[r.ruleId];
+      final cap = ruleIdToCap[r.ruleId];
+      if (weight == null || cap == null) continue;
+      final rawPenalty = (r.riskValue ?? 0) * weight;
+      if (rawPenalty > cap && r.penalty == cap) hitIds.add(r.ruleId);
+    }
+    hitIds.sort((a, b) => a.compareTo(b));
+    return hitIds;
+  }
+
+  static double _round4(double x) => (x * 10000).round() / 10000;
+
+  static Map<String, dynamic> _hotspotMetricsToMap(ScanReport report) {
+    final totalFindings = report.uniqueFindings.length;
+    if (totalFindings == 0) {
+      return <String, dynamic>{
+        'totalFindings': 0,
+        'largestHotspot': null,
+        'concentration': 0.0,
+        'top3Share': 0.0,
+      };
+    }
+    final ordered = HotspotUtils.getOrderedHotspotEntries(report);
+    final top3Sum = ordered.take(3).fold<int>(0, (s, e) => s + e.$2);
+    return <String, dynamic>{
+      'totalFindings': totalFindings,
+      'largestHotspot': ordered.isEmpty
+          ? null
+          : <String, Object>{
+              'path': ordered.first.$1,
+              'findings': ordered.first.$2,
+            },
+      'concentration': _round4(ordered.isEmpty ? 0.0 : ordered.first.$2 / totalFindings),
+      'top3Share': _round4(top3Sum / totalFindings),
     };
   }
 
