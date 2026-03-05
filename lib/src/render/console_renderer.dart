@@ -347,7 +347,7 @@ class ConsoleRenderer {
     }
     final top3 = ordered.take(3).toList();
     for (final e in top3) {
-      final ruleCounts = ruleCountByKey[e.$1] ?? {};
+      final ruleCounts = ruleCountByKey[e.path] ?? {};
       final topRules = ruleCounts.entries.toList()
         ..sort((a, b) {
           final byCount = b.value.compareTo(a.value);
@@ -358,7 +358,7 @@ class ConsoleRenderer {
       final rulePart = top2.isEmpty
           ? ''
           : ' — ${top2.map((r) => '${r.key}: ${r.value}').join(', ')}';
-      print('${e.$1} (${e.$2} findings)$rulePart');
+      print('${e.path} (${e.count} findings)$rulePart');
     }
   }
 

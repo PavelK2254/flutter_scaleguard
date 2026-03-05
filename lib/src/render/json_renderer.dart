@@ -49,10 +49,15 @@ class JsonRenderer {
         'byRule': <String, Object>{},
       };
     }
-    final byCategory = <String, Object>{};
-    for (final e in aggregation.penaltyByCategory.entries) {
-      byCategory[e.key] = e.value;
-    }
+    final categoryEntries = aggregation.penaltyByCategory.entries.toList()
+      ..sort((a, b) {
+        final byValue = b.value.compareTo(a.value);
+        if (byValue != 0) return byValue;
+        return a.key.compareTo(b.key);
+      });
+    final byCategory = <String, Object>{
+      for (final e in categoryEntries) e.key: e.value,
+    };
     final withPenalty =
         ruleResults.where((r) => r.penalty > 0).toList()
           ..sort((a, b) {
@@ -71,7 +76,10 @@ class JsonRenderer {
     };
   }
 
-  /// Rule ids where rawPenalty > cap and final penalty == cap. Sorted ascending for determinism.
+  /// Epsilon for cap-hit detection (avoids missing hits due to floating-point).
+  static const double _capEpsilon = 1e-6;
+
+  /// Rule ids where rawPenalty > cap and final penalty at cap. Sorted ascending for determinism.
   static List<String> _capHitsList(List<RuleResult> ruleResults) {
     final hitIds = <String>[];
     for (final r in ruleResults) {
@@ -79,7 +87,7 @@ class JsonRenderer {
       final cap = ruleIdToCap[r.ruleId];
       if (weight == null || cap == null) continue;
       final rawPenalty = (r.riskValue ?? 0) * weight;
-      if (rawPenalty > cap && r.penalty == cap) hitIds.add(r.ruleId);
+      if (rawPenalty > cap && r.penalty >= cap - _capEpsilon) hitIds.add(r.ruleId);
     }
     hitIds.sort((a, b) => a.compareTo(b));
     return hitIds;
@@ -98,16 +106,16 @@ class JsonRenderer {
       };
     }
     final ordered = HotspotUtils.getOrderedHotspotEntries(report);
-    final top3Sum = ordered.take(3).fold<int>(0, (s, e) => s + e.$2);
+    final top3Sum = ordered.take(3).fold<int>(0, (s, e) => s + e.count);
     return <String, dynamic>{
       'totalFindings': totalFindings,
       'largestHotspot': ordered.isEmpty
           ? null
           : <String, Object>{
-              'path': ordered.first.$1,
-              'findings': ordered.first.$2,
+              'path': ordered.first.path,
+              'findings': ordered.first.count,
             },
-      'concentration': _round4(ordered.isEmpty ? 0.0 : ordered.first.$2 / totalFindings),
+      'concentration': _round4(ordered.isEmpty ? 0.0 : ordered.first.count / totalFindings),
       'top3Share': _round4(top3Sum / totalFindings),
     };
   }

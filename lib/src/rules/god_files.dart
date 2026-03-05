@@ -1,5 +1,6 @@
 import '../core/config.dart';
 import '../core/index.dart';
+import '../core/rule_metadata.dart';
 import '../model/finding.dart';
 import '../model/rule_result.dart';
 import '../model/severity.dart';
@@ -11,10 +12,10 @@ class GodFilesRule implements Rule {
   String get id => 'god_files';
 
   @override
-  double get weight => 0.15;
+  double get weight => ruleIdToWeight[id]!;
 
   @override
-  double get cap => 12;
+  double get cap => ruleIdToCap[id]!;
 
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
