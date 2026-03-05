@@ -13,10 +13,10 @@ class ServiceLocatorAbuseRule implements Rule {
   String get id => 'service_locator_abuse';
 
   @override
-  double get weight => 0.15;
+  double get weight => 0.18;
 
   @override
-  double get cap => 12;
+  double get cap => 14;
 
   static bool _isDiPath(String normalizedPath) {
     return normalizedPath.startsWith('lib/di/') ||
