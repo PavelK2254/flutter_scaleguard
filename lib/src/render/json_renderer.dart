@@ -26,20 +26,44 @@ class JsonRenderer {
       map['projectPath'] = report.projectPath!;
     }
     if (report.aggregation != null) {
-      map['penalties'] = _penaltiesToMap(report.aggregation!);
+      map['penalties'] =
+          _penaltiesToMap(report.aggregation!, report.ruleResults);
     }
     return const JsonEncoder.withIndent('  ').convert(map);
   }
 
   /// Penalties as positive magnitudes. byCategory keys in order: penalty desc, then name asc.
-  static Map<String, Object> _penaltiesToMap(CategoryAggregation aggregation) {
+  /// byRule: rules with penalty > 0, sorted penalty desc then ruleId asc; values rounded to 2 decimals.
+  static Map<String, Object> _penaltiesToMap(
+    CategoryAggregation aggregation,
+    List<RuleResult> ruleResults,
+  ) {
+    if (aggregation.totalPenalty == 0) {
+      return <String, Object>{
+        'total': 0.0,
+        'byCategory': <String, Object>{},
+        'byRule': <String, Object>{},
+      };
+    }
     final byCategory = <String, Object>{};
     for (final e in aggregation.penaltyByCategory.entries) {
       byCategory[e.key] = e.value;
     }
+    final withPenalty =
+        ruleResults.where((r) => r.penalty > 0).toList()
+          ..sort((a, b) {
+            final byPenalty = b.penalty.compareTo(a.penalty);
+            if (byPenalty != 0) return byPenalty;
+            return a.ruleId.compareTo(b.ruleId);
+          });
+    final byRule = <String, Object>{};
+    for (final r in withPenalty) {
+      byRule[r.ruleId] = (r.penalty * 100).round() / 100;
+    }
     return <String, Object>{
       'total': aggregation.totalPenalty,
       'byCategory': byCategory,
+      'byRule': byRule,
     };
   }
 

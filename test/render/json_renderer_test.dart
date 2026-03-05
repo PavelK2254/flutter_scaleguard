@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:scale_guard/scale_guard.dart';
-import 'package:scale_guard/src/core/rule_metadata.dart' as meta;
 import 'package:test/test.dart';
 
 void main() {
@@ -44,9 +43,16 @@ void main() {
       final keys = byCategory.keys.toList();
       expect(keys[0], 'Structural Risk');
       expect(keys[1], 'Coupling Risk');
+      final byRule = penalties['byRule'] as Map<String, dynamic>;
+      expect(byRule.length, 2);
+      final ruleKeys = byRule.keys.toList();
+      expect(ruleKeys[0], 'layer_violations');
+      expect(ruleKeys[1], 'cross_feature_coupling');
+      expect(byRule['layer_violations'], 10.0);
+      expect(byRule['cross_feature_coupling'], 5.0);
     });
 
-    test('penalties block when totalPenalty == 0 has total 0 and all four categories at 0', () {
+    test('penalties block when totalPenalty == 0 has total 0, empty byCategory and byRule', () {
       final results = [
         RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 0, findings: []),
@@ -69,10 +75,9 @@ void main() {
       final penalties = json['penalties'] as Map<String, dynamic>;
       expect(penalties['total'], 0.0);
       final byCategory = penalties['byCategory'] as Map<String, dynamic>;
-      expect(byCategory[meta.categoryStructuralRisk], 0.0);
-      expect(byCategory[meta.categoryCouplingRisk], 0.0);
-      expect(byCategory[meta.categoryMaintainabilityRisk], 0.0);
-      expect(byCategory[meta.categoryConfigReleaseRisk], 0.0);
+      expect(byCategory, isEmpty);
+      final byRule = penalties['byRule'] as Map<String, dynamic>;
+      expect(byRule, isEmpty);
     });
   });
 }
