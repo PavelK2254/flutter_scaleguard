@@ -1,157 +1,238 @@
-# ScaleGuard
+# Flutter ScaleGuard
 
-Flutter projects rarely fail because of missing features.  
-They fail because early architectural shortcuts quietly compound into structural risk.
+Architecture health check for Flutter apps.
 
-**Flutter ScaleGuard** is an opinionated, deterministic architecture risk scanner for Flutter teams preparing to scale.
+**Flutter ScaleGuard** is a deterministic CLI tool that detects architectural risks in Flutter projects before they become expensive to fix.
 
-It does not lint style.  
-It does not measure cosmetic complexity.  
-It evaluates structural decisions that increase long-term refactor cost, coupling, and growth friction.
+Instead of focusing on style or formatting, ScaleGuard analyzes **structural architecture patterns** such as:
 
-ScaleGuard helps you understand:
+- cross-feature coupling
+- layer boundary violations
+- service locator abuse
+- module hotspots
+- configuration risks
 
-- Is your architecture still scalable?
-- Are feature boundaries leaking?
-- Are layers crossing in ways that will hurt velocity later?
-- Are you accumulating hidden structural debt?
+It helps teams detect **architecture erosion early**, before it slows development.
 
-Before your team grows.  
-Before the codebase doubles.  
-Before refactors become expensive.
+---
 
-## Example Output
+# Quick Start
 
-Console report (default) shows the CLI version (from `pubspec.yaml`), score, risk level, summary, dominant risk category, most expensive rule with hotspots and examples, findings by category, top hotspots, and a “Why This Matters” note. Example:
+Install the CLI:
 
+```bash
+dart pub global activate scale_guard
 ```
-Flutter ScaleGuard v0.3.0
-Project: /path/to/your/flutter_project
 
-Architecture Score: 57/100
+Run a scan in your Flutter project:
+
+```bash
+scale_guard scan .
+```
+
+---
+
+# Example Output
+
+```text
+Flutter ScaleGuard v0.4.0
+Project: ../flarehabit
+
+Architecture Score: 69/100
 Risk Level: Medium
 
 Summary:
 This codebase shows early-stage coupling patterns that may reduce feature isolation as the team scales.
 
-Dominant Risk Category: Coupling Risk (62% of total penalty)
-Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-18) [Coupling Risk] [rule: cross_feature_coupling]
-Hotspot (source): lib/features/auth (5 findings)
-Hotspot (target): lib/features/profile (4 findings)
-Examples:
-  lib/features/auth/login/login_screen.dart:12 auth -> profile lib/features/profile/profile_repository.dart
-  lib/features/auth/signup/signup_bloc.dart:8 auth -> profile lib/features/profile/models/user.dart
-  (+3 more)
+Dominant Risk Category: Coupling Risk (69% of total penalty)
+Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-15.0)
 
----
-
-Findings by Category
-
-Coupling Risk
-  - Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (12 across 4 files)
-  - Layer Boundary Crossed (may increase coupling and future refactor cost) (5 across 3 files)
-
----
-
-Top Hotspots
-
-lib/features/auth (8 findings)
-lib/features/profile (6 findings)
-
----
-
-Why This Matters
-Coupling and global access patterns reduce isolation, increasing coordination cost as the codebase grows.
+Hotspot (source): lib/features/habit_details
+Hotspot (target): lib/features/habits
 ```
 
-## Install
+---
+
+# CI / Guardrail Usage
+
+ScaleGuard can be used to prevent architectural regressions in CI pipelines.
+
+Example:
+
+```bash
+scale_guard scan . --fail-under 70
+```
+
+If the architecture score drops below the threshold, the command exits with a failure code.
+
+This allows teams to enforce **architecture quality gates** automatically.
+
+---
+
+# Installation
+
+Global install via Dart:
 
 ```bash
 dart pub global activate scale_guard
-# or from this repo:
-cd scale_guard && dart pub get
 ```
 
-## Usage
-
-```bash
-# Scan a project (default: console report)
-scale_guard scan /path/to/flutter_project
-
-# JSON report
-scale_guard scan /path/to/flutter_project --json
-```
-
-Or run directly:
+Or run directly from the repository:
 
 ```bash
 dart run bin/scale_guard.dart scan .
-dart run bin/scale_guard.dart scan . --json
 ```
 
-## Output
+---
 
-- **Architecture Score**: 0–100 (100 = no penalties).
+# Usage
 
-When using `--json` with `--fail-under`, the fail-under message is printed to stderr so stdout remains valid JSON. On Windows PowerShell, stderr may be displayed as a command error even though the JSON written to stdout (e.g. `out.json`) is valid.
-- **Risk Level**: Low (80–100), Medium (55–79), High (0–54).
-- **Findings**: Categorized as High or Medium, with file, line (if applicable), and message.
-- **Suggested next actions**: Rule IDs that produced findings.
+Basic scan:
 
-Output order is deterministic (findings sorted by severity, then file path, then line).
+```bash
+scale_guard scan .
+```
 
-## Exit codes
+JSON output:
 
-- **0** — Scan succeeded (and passed `--fail-under` if provided).
-- **2** — Scan succeeded but `--fail-under` threshold not met.
-- **64** — Invalid usage / invalid project path (e.g., path missing or not a directory).
-- **1** — High risk (scan succeeded but risk level is High).
+```bash
+scale_guard scan . --json
+```
 
-## Configuration (optional)
+Fail if architecture score is too low:
 
-Place `risk_scanner.yaml` in the project root to override defaults.
+```bash
+scale_guard scan . --fail-under 70
+```
+
+---
+
+# Output
+
+ScaleGuard produces a structured report containing:
+
+### Architecture Score
+
+Numeric score from **0–100**.
+
+Higher score means lower architectural risk.
+
+### Risk Level
+
+Risk classification based on score:
+
+| Score | Risk Level |
+|------|-------------|
+| 80–100 | Low |
+| 55–79 | Medium |
+| 0–54 | High |
+
+### Dominant Risk Category
+
+Identifies the architecture problem contributing most to the score penalty.
+
+### Most Expensive Risk
+
+The single rule responsible for the largest score reduction.
+
+### Hotspots
+
+Files or modules where architectural violations concentrate.
+
+This helps teams focus refactoring effort where it matters most.
+
+---
+
+# Exit Codes
+
+| Code | Meaning |
+|-----|--------|
+| 0 | Scan completed successfully |
+| 1 | Score below `--fail-under` threshold |
+| 64 | Invalid command usage |
+
+---
+
+# Configuration (optional)
+
+ScaleGuard can be configured via a `risk_scanner.yaml` file in the project root.
+
+Example configuration options:
 
 | Key | Description | Default |
-|-----|-------------|---------|
-| `feature_roots` | Paths under which feature folders live | `['lib/features']` |
-| `layer_mappings` | Path segment → layer name (presentation/domain/data) | `presentation`, `domain`, `data` |
-| `ignored_patterns` | Path substrings or suffixes to skip | `.g.dart`, `.freezed.dart`, `.gen.dart`, `/build/` |
-| `god_file_medium_loc` | LOC threshold for medium “god file” finding | `500` |
-| `god_file_high_loc` | LOC threshold for high “god file” finding | `900` |
-| `shared_path_segments` | Path segments that denote shared/common (must not import features) | `['shared', 'common']` |
-| `allowed_layer_dependencies` | From-layer → list of layers it may import | presentation→domain, data→domain |
-| `service_locator_patterns` | Strings that indicate service locator / global access | GetIt, Provider.of, etc. |
-| `route_constant_prefixes` | Prefixes that exempt route usage from “navigation coupling” | `Routes.`, `AppRoutes.` |
-| `hardcoded_url_patterns` | Strings that indicate hardcoded URLs in non-data layers | `http://`, `https://`, `www.` |
+|----|-------------|--------|
+| feature_roots | Paths where feature modules are located | `lib/features` |
+| layer_mappings | Mapping of folders to architecture layers | presentation / domain / data |
+| ignored_patterns | File patterns to exclude from analysis | generated files |
+| god_file_medium_loc | LOC threshold for medium file size risk | 500 |
+| god_file_high_loc | LOC threshold for high file size risk | 900 |
 
-All thresholds and rule weights/caps are defined in code: see `lib/src/core/config.dart` and `lib/src/scoring/scoring_engine.dart`.
+---
 
-## Rules (MVP)
+# Rules
 
-1. **Cross Feature Coupling** – Feature folders importing other feature folders.
-2. **Layer Violations** – Invalid imports between presentation, domain, data (e.g. presentation → data).
-3. **God Files** – Files over LOC thresholds (medium/high).
-4. **Hardcoded Scale Risks** – URLs/endpoints in presentation or domain.
-5. **Service Locator / Global State** – GetIt, Provider.of, etc. in restricted layers.
-6. **Shared Boundary Leakage** – shared/common importing feature code.
-7. **Navigation Coupling** – Direct route strings instead of centralized navigation.
+ScaleGuard currently detects the following architecture risks:
 
-Scoring: start at 100; each rule contributes a penalty `min(cap, weight * risk_value)`; final score is clamped 0–100. Risk level from score bands above.
+### Cross Feature Coupling
+Feature modules importing other feature modules.
 
-## Development
+### Layer Violations
+Invalid dependencies between architecture layers.
 
-- **Version display**  
-  The banner shows the package version (e.g. `Flutter ScaleGuard v0.3.0`). At runtime the version is read from `pubspec.yaml` when possible; a fallback in `lib/src/version.dart` is used for AOT or when the package root cannot be resolved. Keep that fallback in sync with `pubspec.yaml` so the displayed version is always correct.
+Example:
+```text
+presentation → data
+```
 
-- **Syncing the version after a release bump**  
-  After bumping `version` in `pubspec.yaml`, update the fallback constant in code:
+### God Files
+Files exceeding defined size thresholds.
 
-  ```bash
-  dart run tool/update_version.dart
-  ```
+### Hardcoded Scale Risks
+Configuration values embedded directly in code.
 
-  This script reads the version from `pubspec.yaml` and rewrites `fallbackPackageVersion` in `lib/src/version.dart`.
+### Service Locator Abuse
+Global dependency access patterns.
 
-## License
+### Shared Boundary Leakage
+Shared modules importing feature modules.
 
-Apache License 2.0. See [LICENSE](LICENSE) for the full text.
+### Navigation Coupling
+Direct route usage instead of centralized navigation.
+
+---
+
+# Design Principles
+
+ScaleGuard is intentionally designed to be:
+
+**Deterministic**  
+Same code always produces the same result.
+
+**Fast**  
+Scans large Flutter projects in seconds.
+
+**Opinionated**  
+Focused specifically on architectural scale risks.
+
+**CLI-first**  
+Simple tooling that integrates easily into CI pipelines.
+
+---
+
+# When to Use ScaleGuard
+
+ScaleGuard is useful when:
+
+- preparing a Flutter app for scale
+- auditing an existing codebase
+- reviewing architecture health during development
+- preventing architecture decay in CI
+- identifying refactoring hotspots
+
+---
+
+# License
+
+Apache License 2.0.
+
+See the [LICENSE](LICENSE) file for details.

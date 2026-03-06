@@ -5,6 +5,18 @@ All notable changes to Flutter ScaleGuard are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+
+- **README** — Restructured with Quick Start (global install and basic scan), Example Output (sample report with score and risk level), CI/Guardrail usage with `--fail-under`, Installation (global and from repo), Usage (basic scan, JSON, fail-under), Output section (Architecture Score, Risk Level table, Dominant Risk Category, Most Expensive Risk, Hotspots), Exit codes table (0, 1, 64), Configuration (risk_scanner.yaml options table), Rules overview (Cross Feature Coupling, Layer Violations, God Files, Hardcoded Scale Risks, Service Locator Abuse, Shared Boundary Leakage, Navigation Coupling), Design Principles, and When to Use ScaleGuard.
+
+### Changed
+
+- **pubspec.yaml** — Added `homepage`, `repository`, and `issue_tracker` URLs; added `topics` (flutter, architecture, cli, static-analysis, code-quality); description set to "Deterministic CLI for detecting architectural scale risks in Flutter projects."
+
+---
+
 ## [0.4.0] - 2025-03-06
 
 ### Added
