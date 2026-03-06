@@ -38,9 +38,9 @@ class JsonRenderer {
     }
     if (report.aggregation != null) {
       map['penalties'] = _penaltiesToMap(report.aggregation!);
-      map['capHits'] =
-          report.capHits ?? ReportDebug.computeCapHits(report.ruleResults);
     }
+    final capHitsRaw = report.capHits ?? ReportDebug.computeCapHits(report.ruleResults);
+    map['capHits'] = List<String>.from(capHitsRaw)..sort();
     map['hotspotMetrics'] = report.hotspotMetrics != null
         ? _hotspotMetricsToJsonMap(report.hotspotMetrics!)
         : _hotspotMetricsToMap(report);

@@ -9,6 +9,11 @@ import '../version.dart';
 /// Runs the CLI with [arguments]. Returns exit code: 0 for success (and score meets fail-under if set),
 /// 1 for High risk, 2 when score is below --fail-under threshold, 64 for usage error.
 Future<int> runCli(List<String> arguments) async {
+  if (arguments.contains('--help') || arguments.contains('-h')) {
+    _printHelp();
+    return 0;
+  }
+
   final json = arguments.contains('--json');
   final stats = arguments.contains('--stats');
   final debug = arguments.contains('--debug');
@@ -27,11 +32,6 @@ Future<int> runCli(List<String> arguments) async {
       return 64;
     }
     failUnder = value;
-  }
-
-  if (arguments.contains('--help') || arguments.contains('-h')) {
-    _printHelp();
-    return 0;
   }
 
   final args = <String>[];
@@ -65,8 +65,8 @@ Future<int> _runScan(String projectPath,
   final dir = Directory(projectPath);
   if (!await dir.exists() ||
       !await dir.stat().then((s) => s.type == FileSystemEntityType.directory)) {
-    print('Error: project path not found or not a directory: $projectPath');
-    return 1;
+    stderr.writeln('Error: project path not found or not a directory: $projectPath');
+    return 64;
   }
   final report = await runScan(projectPath);
   if (jsonOutput) {
@@ -100,6 +100,6 @@ void _printHelp() {
   print('Exit codes:');
   print('  0  Scan succeeded (and passed --fail-under if provided)');
   print('  2  Scan succeeded but --fail-under threshold not met');
-  print('  64 Invalid usage / invalid project path (e.g., not a Flutter project)');
-  print('  1  Internal error (unexpected exception)');
+  print('  64 Invalid usage / invalid project path (e.g., not a directory)');
+  print('  1  High risk (scan succeeded but risk level is High)');
 }

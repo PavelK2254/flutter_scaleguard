@@ -189,7 +189,8 @@ class ConsoleRenderer {
 
     if (hasCapHits) {
       print('Cap Hits');
-      for (final id in report.capHits!) {
+      final sorted = List<String>.from(report.capHits!)..sort();
+      for (final id in sorted) {
         print(id);
       }
       print('');

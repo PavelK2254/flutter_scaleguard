@@ -47,6 +47,20 @@ void main() {
       expect(json, contains('"resolvedToProject"'));
     });
 
+    test('CLI invalid project path returns 64 and writes error to stderr', () async {
+      const badPath = '/nonexistent/path/12345';
+      final result = await runCli(['scan', badPath]);
+      expect(result, 64);
+      final processResult = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', badPath],
+        runInShell: true,
+        workingDirectory: Directory.current.path,
+      );
+      expect(processResult.exitCode, 64);
+      expect(processResult.stderr, contains('project path not found'));
+    });
+
     test('CLI --help prints usage and exit codes, exits 0', () async {
       final result = await runCli(['scan', Directory.current.path, '--help']);
       expect(result, 0);

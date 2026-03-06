@@ -104,8 +104,8 @@ Output order is deterministic (findings sorted by severity, then file path, then
 
 - **0** — Scan succeeded (and passed `--fail-under` if provided).
 - **2** — Scan succeeded but `--fail-under` threshold not met.
-- **64** — Invalid usage / invalid project path (e.g., not a Flutter project).
-- **1** — Internal error (unexpected exception).
+- **64** — Invalid usage / invalid project path (e.g., path missing or not a directory).
+- **1** — High risk (scan succeeded but risk level is High).
 
 ## Configuration (optional)
 
