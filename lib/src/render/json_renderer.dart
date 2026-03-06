@@ -1,20 +1,29 @@
 import 'dart:convert';
 
 import '../core/hotspot_utils.dart';
-import '../core/rule_metadata.dart';
+import '../core/report_debug.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
+import '../model/hotspot_metrics.dart';
 import '../model/risk_level.dart';
 import '../model/rule_result.dart';
 import '../model/scan_meta.dart';
 import '../model/scan_report.dart';
 import '../model/severity.dart';
+import '../version.dart';
 
 class JsonRenderer {
   JsonRenderer._();
 
-  static String render(ScanReport report) {
+  static const String jsonSchemaVersion = '1.0';
+
+  /// Renders [report] to JSON. [version] is the tool version (e.g. from [getPackageVersion]);
+  /// if null, uses [fallbackPackageVersion].
+  static String render(ScanReport report, {String? version}) {
+    final toolVersion = version ?? fallbackPackageVersion;
     final map = <String, Object>{
+      'toolVersion': toolVersion,
+      'schemaVersion': jsonSchemaVersion,
       'score': report.score,
       'riskLevel': _riskLevelString(report.riskLevel),
       'timestamp': report.timestamp.toIso8601String(),
@@ -28,20 +37,18 @@ class JsonRenderer {
       map['projectPath'] = report.projectPath!;
     }
     if (report.aggregation != null) {
-      map['penalties'] =
-          _penaltiesToMap(report.aggregation!, report.ruleResults);
-      map['capHits'] = _capHitsList(report.ruleResults);
+      map['penalties'] = _penaltiesToMap(report.aggregation!);
+      map['capHits'] =
+          report.capHits ?? ReportDebug.computeCapHits(report.ruleResults);
     }
-    map['hotspotMetrics'] = _hotspotMetricsToMap(report);
+    map['hotspotMetrics'] = report.hotspotMetrics != null
+        ? _hotspotMetricsToJsonMap(report.hotspotMetrics!)
+        : _hotspotMetricsToMap(report);
     return const JsonEncoder.withIndent('  ').convert(map);
   }
 
-  /// Penalties as positive magnitudes. byCategory keys in order: penalty desc, then name asc.
-  /// byRule: rules with penalty > 0, sorted penalty desc then ruleId asc; values rounded to 2 decimals.
-  static Map<String, Object> _penaltiesToMap(
-    CategoryAggregation aggregation,
-    List<RuleResult> ruleResults,
-  ) {
+  /// Penalties as positive magnitudes. byCategory and byRule from aggregation.
+  static Map<String, Object> _penaltiesToMap(CategoryAggregation aggregation) {
     if (aggregation.totalPenalty == 0) {
       return <String, Object>{
         'total': 0.0,
@@ -58,17 +65,9 @@ class JsonRenderer {
     final byCategory = <String, Object>{
       for (final e in categoryEntries) e.key: e.value,
     };
-    final withPenalty =
-        ruleResults.where((r) => r.penalty > 0).toList()
-          ..sort((a, b) {
-            final byPenalty = b.penalty.compareTo(a.penalty);
-            if (byPenalty != 0) return byPenalty;
-            return a.ruleId.compareTo(b.ruleId);
-          });
-    final byRule = <String, Object>{};
-    for (final r in withPenalty) {
-      byRule[r.ruleId] = (r.penalty * 100).round() / 100;
-    }
+    final byRule = <String, Object>{
+      for (final e in aggregation.penaltyByRule.entries) e.key: e.value,
+    };
     return <String, Object>{
       'total': aggregation.totalPenalty,
       'byCategory': byCategory,
@@ -76,24 +75,21 @@ class JsonRenderer {
     };
   }
 
-  /// Epsilon for cap-hit detection (avoids missing hits due to floating-point).
-  static const double _capEpsilon = 1e-6;
-
-  /// Rule ids where rawPenalty > cap and final penalty at cap. Sorted ascending for determinism.
-  static List<String> _capHitsList(List<RuleResult> ruleResults) {
-    final hitIds = <String>[];
-    for (final r in ruleResults) {
-      final weight = ruleIdToWeight[r.ruleId];
-      final cap = ruleIdToCap[r.ruleId];
-      if (weight == null || cap == null) continue;
-      final rawPenalty = (r.riskValue ?? 0) * weight;
-      if (rawPenalty > cap && r.penalty >= cap - _capEpsilon) hitIds.add(r.ruleId);
-    }
-    hitIds.sort((a, b) => a.compareTo(b));
-    return hitIds;
-  }
-
   static double _round4(double x) => (x * 10000).round() / 10000;
+
+  static Map<String, dynamic> _hotspotMetricsToJsonMap(HotspotMetrics m) {
+    return <String, dynamic>{
+      'totalFindings': m.totalFindings,
+      'largestHotspot': m.largestHotspot == null
+          ? null
+          : <String, Object>{
+              'path': m.largestHotspot!.path,
+              'findings': m.largestHotspot!.findings,
+            },
+      'concentration': m.concentration,
+      'top3Share': m.top3Share,
+    };
+  }
 
   static Map<String, dynamic> _hotspotMetricsToMap(ScanReport report) {
     final totalFindings = report.uniqueFindings.length;

@@ -20,7 +20,9 @@ class ConsoleRenderer {
   /// Renders [report] to the console. [version] should come from [getPackageVersion]
   /// so the banner matches pubspec; if null, uses [fallbackPackageVersion].
   /// When [showStats] is true and report has meta, prints Scan Stats section.
-  static void render(ScanReport report, {String? version, bool showStats = false}) {
+  /// When [showDebug] is true, appends Debug Details (penalties, capHits, hotspot metrics).
+  static void render(ScanReport report,
+      {String? version, bool showStats = false, bool showDebug = false}) {
     final v = version ?? fallbackPackageVersion;
     final versionLabel = v.startsWith('v') ? v : 'v$v';
     print('Flutter ScaleGuard $versionLabel');
@@ -88,11 +90,15 @@ class ConsoleRenderer {
       _printMostExpensiveHotspot(report, ruleId, sourceTop, targetTop);
       _printMostExpensiveExamples(
           report, ruleId, topSourceHotspotKey: sourceTop?.$1);
+      if (!showDebug &&
+          report.capHits != null &&
+          report.capHits!.isNotEmpty) {
+        _printCapHitNote(report.capHits!);
+      }
       print('');
       print('---');
       print('');
       _printFindingsByCategory(report, agg);
-      _printPenaltyByCategory(agg);
       print('---');
       print('');
       _printTopHotspots(report);
@@ -100,9 +106,10 @@ class ConsoleRenderer {
       print('');
       final whyMap = useSoft ? categoryToWhySoft : categoryToWhyStandard;
       final why = whyMap[agg.dominantCategory] ?? '';
-      print('Why This Matters');
+      print('Why This Matters:');
       print(why);
       if (showStats && report.meta != null) _printScanStats(report);
+      if (showDebug) _printDebugDetails(report);
     } else {
       final findings = report.findings;
       if (findings.isEmpty) {
@@ -125,6 +132,7 @@ class ConsoleRenderer {
         }
       }
       if (showStats && report.meta != null) _printScanStats(report);
+      if (showDebug) _printDebugDetails(report);
     }
   }
 
@@ -136,6 +144,69 @@ class ConsoleRenderer {
         'Files scanned: ${m.scannedFiles} (${m.ignoredFiles} ignored)');
     print(
         'Imports: ${m.importsResolvedToProject}/${m.importsTotal} resolved | ${m.importsExternalPackage} external | ${m.importsUnresolved} unresolved');
+  }
+
+  /// Prints Debug Details section when [showDebug] is true. Only prints header if at least one block has content.
+  static void _printDebugDetails(ScanReport report) {
+    final agg = report.aggregation;
+    final hasPenaltyByCategory =
+        agg != null && agg.totalPenalty > 0 && agg.penaltyByCategory.isNotEmpty;
+    final hasPenaltyByRule =
+        agg != null && agg.penaltyByRule.isNotEmpty;
+    final hasCapHits =
+        report.capHits != null && report.capHits!.isNotEmpty;
+    final hasHotspotMetrics = report.hotspotMetrics != null;
+
+    if (!hasPenaltyByCategory &&
+        !hasPenaltyByRule &&
+        !hasCapHits &&
+        !hasHotspotMetrics) {
+      return;
+    }
+
+    print('');
+    print('---');
+    print('Debug Details');
+    print('');
+
+    if (hasPenaltyByCategory) {
+      _printPenaltyByCategory(agg);
+    }
+
+    if (hasPenaltyByRule) {
+      print('Penalty by Rule');
+      final entries = agg.penaltyByRule.entries.toList()
+        ..sort((a, b) {
+          final byVal = b.value.compareTo(a.value);
+          if (byVal != 0) return byVal;
+          return a.key.compareTo(b.key);
+        });
+      for (final e in entries) {
+        print('${e.key}: -${e.value.toStringAsFixed(2)}');
+      }
+      print('');
+    }
+
+    if (hasCapHits) {
+      print('Cap Hits');
+      for (final id in report.capHits!) {
+        print(id);
+      }
+      print('');
+    }
+
+    if (hasHotspotMetrics) {
+      final hm = report.hotspotMetrics!;
+      print('Hotspot Metrics');
+      print('totalFindings: ${hm.totalFindings}');
+      print('concentration: ${hm.concentration.toStringAsFixed(4)}');
+      print('top3Share: ${hm.top3Share.toStringAsFixed(4)}');
+      if (hm.largestHotspot != null) {
+        print(
+            'largestHotspot: ${hm.largestHotspot!.path} (${hm.largestHotspot!.findings} findings)');
+      }
+      print('');
+    }
   }
 
   static const int _maxEvidenceLength = 80;
@@ -278,9 +349,22 @@ class ConsoleRenderer {
     if (more > 0) print('  (+$more more)');
   }
 
+  /// One-line cap-hit note (default output only). [capHits] must be non-empty; sorted alphabetically.
+  static void _printCapHitNote(List<String> capHits) {
+    final sorted = List<String>.from(capHits)..sort();
+    final names = sorted.join(', ');
+    if (sorted.length == 1) {
+      print(
+          'Note: $names reached its penalty cap (score may understate severity for this rule).');
+    } else {
+      print(
+          'Note: $names reached their penalty caps (score may understate severity for these rules).');
+    }
+  }
+
   static void _printFindingsByCategory(
       ScanReport report, CategoryAggregation aggregation) {
-    print('Findings by Category');
+    print('Findings by Category:');
     print('');
     final ruleIdToCat = ruleIdToCategory;
     for (final cs in aggregation.categoryScores) {
@@ -335,7 +419,7 @@ class ConsoleRenderer {
   }
 
   static void _printTopHotspots(ScanReport report) {
-    print('Top Hotspots');
+    print('Top Hotspots:');
     print('');
     final ordered = HotspotUtils.getOrderedHotspotEntries(report);
     if (ordered.isEmpty) return;

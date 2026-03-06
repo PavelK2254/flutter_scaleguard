@@ -92,6 +92,8 @@ dart run bin/scale_guard.dart scan . --json
 ## Output
 
 - **Architecture Score**: 0–100 (100 = no penalties).
+
+When using `--json` with `--fail-under`, the fail-under message is printed to stderr so stdout remains valid JSON. On Windows PowerShell, stderr may be displayed as a command error even though the JSON written to stdout (e.g. `out.json`) is valid.
 - **Risk Level**: Low (80–100), Medium (55–79), High (0–54).
 - **Findings**: Categorized as High or Medium, with file, line (if applicable), and message.
 - **Suggested next actions**: Rule IDs that produced findings.
@@ -100,9 +102,10 @@ Output order is deterministic (findings sorted by severity, then file path, then
 
 ## Exit codes
 
-- `0`: Low or Medium risk.
-- `1`: High risk.
-- `64`: Invalid usage (e.g. missing `scan` or path).
+- **0** — Scan succeeded (and passed `--fail-under` if provided).
+- **2** — Scan succeeded but `--fail-under` threshold not met.
+- **64** — Invalid usage / invalid project path (e.g., not a Flutter project).
+- **1** — Internal error (unexpected exception).
 
 ## Configuration (optional)
 

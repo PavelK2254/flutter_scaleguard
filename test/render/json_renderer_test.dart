@@ -4,6 +4,34 @@ import 'package:scale_guard/scale_guard.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('JsonRenderer schema versioning', () {
+    test('output includes toolVersion and schemaVersion "1.0", existing fields unchanged', () {
+      final report = ScanReport(
+        score: 85,
+        riskLevel: RiskLevel.low,
+        ruleResults: [
+          RuleResult(ruleId: 'layer_violations', penalty: 5, findings: []),
+        ],
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+      );
+      final jsonStr = JsonRenderer.render(report);
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+      expect(json.containsKey('toolVersion'), isTrue);
+      expect(json['toolVersion'], isA<String>());
+      expect((json['toolVersion'] as String).isNotEmpty, isTrue);
+      expect(json.containsKey('schemaVersion'), isTrue);
+      expect(json['schemaVersion'], '1.0');
+      expect(json.containsKey('score'), isTrue);
+      expect(json.containsKey('riskLevel'), isTrue);
+      expect(json.containsKey('timestamp'), isTrue);
+      expect(json.containsKey('findings'), isTrue);
+      expect(json.containsKey('ruleResults'), isTrue);
+      expect(json['score'], 85);
+      expect(json['riskLevel'], 'Low');
+    });
+  });
+
   final ruleIdToCategory = {
     'layer_violations': 'Structural Risk',
     'cross_feature_coupling': 'Coupling Risk',

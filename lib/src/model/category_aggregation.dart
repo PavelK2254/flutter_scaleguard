@@ -27,6 +27,7 @@ class CategoryAggregation {
     required this.mostExpensivePenalty,
     required this.totalPenalty,
     required this.penaltyByCategory,
+    required this.penaltyByRule,
   });
 
   /// Sorted by totalPenalty descending, then category ascending.
@@ -37,6 +38,10 @@ class CategoryAggregation {
   /// as category). Sum of values equals [totalPenalty].
   /// Iteration order: penalty descending, then category name ascending.
   final Map<String, double> penaltyByCategory;
+
+  /// Penalty per rule (rules with penalty > 0 only). Iteration order: penalty
+  /// descending, then ruleId ascending. Values rounded to 2 decimals.
+  final Map<String, double> penaltyByRule;
 
   /// Category name with highest total penalty (ties: alphabetical).
   final String dominantCategory;
@@ -144,6 +149,17 @@ class CategoryAggregation {
       for (final k in orderedKeys) k: categoryPenalty[k] ?? 0.0,
     };
 
+    // penaltyByRule: rules with penalty > 0, sorted penalty desc then ruleId asc; 2 decimals.
+    final withPenalty = results.where((r) => r.penalty > 0).toList()
+      ..sort((a, b) {
+        final byPenalty = b.penalty.compareTo(a.penalty);
+        if (byPenalty != 0) return byPenalty;
+        return a.ruleId.compareTo(b.ruleId);
+      });
+    final penaltyByRule = {
+      for (final r in withPenalty) r.ruleId: (r.penalty * 100).round() / 100,
+    };
+
     return CategoryAggregation(
       categoryScores: effectiveScores,
       dominantCategory: dominantCategory,
@@ -151,6 +167,7 @@ class CategoryAggregation {
       mostExpensivePenalty: mostExpensivePenalty,
       totalPenalty: totalPenalty,
       penaltyByCategory: penaltyByCategory,
+      penaltyByRule: penaltyByRule,
     );
   }
 }
