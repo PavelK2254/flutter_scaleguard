@@ -362,7 +362,7 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
-      final topHotspotsStart = lines.indexWhere((l) => l == 'Top Hotspots');
+      final topHotspotsStart = lines.indexWhere((l) => l == 'Top Hotspots:');
       expect(topHotspotsStart, greaterThanOrEqualTo(0));
       final topHotspotsBlock = lines
           .skip(topHotspotsStart + 2)
@@ -486,7 +486,7 @@ void main() {
   });
 
   group('Penalty by Category', () {
-    test('prints penalty block with two decimals and deterministic order when totalPenalty > 0', () {
+    test('default output does not contain Penalty by Category or Debug Details', () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
@@ -504,14 +504,43 @@ void main() {
         aggregation: aggregation,
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
+      expect(lines.any((l) => l == 'Penalty by Category'), isFalse);
+      expect(lines.any((l) => l == 'Debug Details'), isFalse);
+      expect(lines.any((l) => l == 'Penalty by Rule'), isFalse);
+      expect(lines.any((l) => l == 'Cap Hits'), isFalse);
+      expect(lines.any((l) => l == 'Hotspot Metrics'), isFalse);
+    });
+
+    test('with showDebug prints penalty block under Debug Details with two decimals and deterministic order when totalPenalty > 0', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 89,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+      );
+      final lines = _capturePrint(() =>
+          ConsoleRenderer.render(report, showStats: false, showDebug: true));
+      expect(lines.any((l) => l == 'Debug Details'), isTrue);
       expect(lines.any((l) => l == 'Penalty by Category'), isTrue);
       expect(lines.any((l) => l == 'Coupling Risk: -10.00'), isTrue);
       expect(lines.any((l) => l == 'Structural Risk: -1.00'), isTrue);
       expect(lines.any((l) => l == 'Maintainability Risk: -0.00'), isTrue);
       expect(lines.any((l) => l == 'Configuration / Release Risk: -0.00'), isTrue);
       expect(lines.any((l) => l == 'Total Penalty: -11.00'), isTrue);
+      final debugStart = lines.indexWhere((l) => l == 'Debug Details');
       final blockStart = lines.indexWhere((l) => l == 'Penalty by Category');
-      expect(blockStart, greaterThanOrEqualTo(0));
+      expect(blockStart, greaterThan(debugStart),
+          reason: 'Penalty by Category must appear after Debug Details');
       final categoryLines = lines
           .skip(blockStart + 1)
           .take(4)
@@ -543,6 +572,272 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
       expect(lines.any((l) => l == 'Penalty by Category'), isFalse);
+    });
+  });
+
+  group('Cap-hit note (default output)', () {
+    test('with capHits shows single-line Note after Most Expensive Risk block', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 89,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+        capHits: ['cross_feature_coupling'],
+      );
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
+      expect(
+        lines.any((l) =>
+            l.contains('Note:') &&
+            l.contains('cross_feature_coupling') &&
+            l.contains('reached its penalty cap') &&
+            l.contains('this rule')),
+        isTrue,
+        reason: 'Must show singular cap-hit note',
+      );
+      expect(lines.any((l) => l.contains('these rules')), isFalse);
+    });
+
+    test('with multiple capHits shows plural Note, rule IDs sorted alphabetically', () {
+      final results = [
+        RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 80,
+        riskLevel: RiskLevel.medium,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+        capHits: ['layer_violations', 'cross_feature_coupling'],
+      );
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
+      expect(
+        lines.any((l) =>
+            l.contains('Note:') &&
+            l.contains('reached their penalty caps') &&
+            l.contains('these rules')),
+        isTrue,
+      );
+      final noteLine =
+          lines.where((l) => l.startsWith('Note:')).single;
+      expect(noteLine, contains('cross_feature_coupling'));
+      expect(noteLine, contains('layer_violations'));
+      expect(noteLine.indexOf('cross_feature_coupling'),
+          lessThan(noteLine.indexOf('layer_violations')),
+          reason: 'Rule IDs must be alphabetically ordered');
+    });
+
+    test('without capHits does not show cap-hit Note', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 5, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 95,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        projectPath: 'project',
+        aggregation: aggregation,
+      );
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
+      expect(
+        lines.any((l) =>
+            l.startsWith('Note:') && l.contains('penalty cap')),
+        isFalse,
+      );
+    });
+
+    test('with showDebug does not show cap-hit Note in default section', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 89,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+        capHits: ['cross_feature_coupling'],
+      );
+      final lines = _capturePrint(() =>
+          ConsoleRenderer.render(report, showStats: false, showDebug: true));
+      expect(
+        lines.any((l) =>
+            l.startsWith('Note:') && l.contains('penalty cap')),
+        isFalse,
+        reason: 'Cap-hit note is default-only, not in --debug',
+      );
+    });
+  });
+
+  group('Console output flags', () {
+    test('default output snapshot: required sections present in order, no debug blocks', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 5, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 95,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        projectPath: 'project',
+        aggregation: aggregation,
+      );
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
+      final full = lines.join('\n');
+      expect(full, contains('Flutter ScaleGuard'));
+      expect(full, contains('Project: project'));
+      expect(full, contains('Architecture Score: 95/100'));
+      expect(full, contains('Findings by Category:'));
+      expect(full, contains('Top Hotspots:'));
+      expect(full, contains('Why This Matters:'));
+      expect(full, isNot(contains('Debug Details')));
+      expect(full, isNot(contains('Penalty by Category')));
+      expect(full, isNot(contains('Scan Stats')));
+      expect(full, isNot(contains('reached its penalty cap')),
+          reason: 'No cap-hit note when capHits empty/absent');
+      final findingsIdx = lines.indexOf('Findings by Category:');
+      final topHotspotsIdx = lines.indexOf('Top Hotspots:');
+      final whyIdx = lines.indexOf('Why This Matters:');
+      expect(findingsIdx, lessThan(topHotspotsIdx));
+      expect(topHotspotsIdx, lessThan(whyIdx));
+      expect(lines.where((l) => l == '---').length, greaterThanOrEqualTo(2),
+          reason: 'Section separators must be exactly ---');
+    });
+
+    test('--stats only: includes Scan Stats, no Debug Details', () {
+      final results = [
+        RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 99,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+        meta: ScanMeta(
+          schemaVersion: '1.0',
+          scannedFiles: 10,
+          ignoredFiles: 2,
+          importsTotal: 50,
+          importsResolvedToProject: 40,
+          importsExternalPackage: 8,
+          importsUnresolved: 2,
+        ),
+      );
+      final lines = _capturePrint(() =>
+          ConsoleRenderer.render(report, showStats: true, showDebug: false));
+      expect(lines.any((l) => l == 'Scan Stats'), isTrue);
+      expect(lines.any((l) => l.startsWith('Files scanned:')), isTrue);
+      expect(lines.any((l) => l.contains('Imports:')), isTrue);
+      expect(lines.any((l) => l == 'Debug Details'), isFalse);
+    });
+
+    test('--debug only: includes Debug Details with Penalty by Rule when present', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
+        RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 89,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+        capHits: [],
+        hotspotMetrics: const HotspotMetrics(
+          totalFindings: 0,
+          concentration: 0.0,
+          top3Share: 0.0,
+        ),
+      );
+      final lines = _capturePrint(() =>
+          ConsoleRenderer.render(report, showStats: false, showDebug: true));
+      expect(lines.any((l) => l == 'Debug Details'), isTrue);
+      expect(lines.any((l) => l == 'Penalty by Category'), isTrue);
+      expect(lines.any((l) => l == 'Penalty by Rule'), isTrue);
+    });
+
+    test('--stats --debug: Scan Stats then Debug Details in order', () {
+      final results = [
+        RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final report = ScanReport(
+        score: 99,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+        meta: ScanMeta(
+          schemaVersion: '1.0',
+          scannedFiles: 5,
+          ignoredFiles: 0,
+          importsTotal: 20,
+          importsResolvedToProject: 18,
+          importsExternalPackage: 1,
+          importsUnresolved: 1,
+        ),
+        hotspotMetrics: const HotspotMetrics(
+          totalFindings: 0,
+          concentration: 0.0,
+          top3Share: 0.0,
+        ),
+      );
+      final lines = _capturePrint(() =>
+          ConsoleRenderer.render(report, showStats: true, showDebug: true));
+      final scanStatsIdx = lines.indexWhere((l) => l == 'Scan Stats');
+      final debugDetailsIdx = lines.indexWhere((l) => l == 'Debug Details');
+      expect(scanStatsIdx, greaterThanOrEqualTo(0));
+      expect(debugDetailsIdx, greaterThanOrEqualTo(0));
+      expect(debugDetailsIdx, greaterThan(scanStatsIdx),
+          reason: 'Debug Details must come after Scan Stats');
     });
   });
 }

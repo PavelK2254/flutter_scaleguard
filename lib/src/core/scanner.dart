@@ -4,6 +4,7 @@ import 'config.dart';
 import 'index.dart';
 import 'module_root.dart';
 import 'path_utils.dart' as path_utils;
+import 'report_debug.dart';
 import 'rule_metadata.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
@@ -215,7 +216,7 @@ Future<ScanReport> runScan(String projectPath,
     ruleIdToCategory,
     uniqueFindings: uniqueFindings,
   );
-  return ScanReport(
+  var report = ScanReport(
     score: scoreResult.score,
     riskLevel: scoreResult.riskLevel,
     ruleResults: results,
@@ -226,6 +227,11 @@ Future<ScanReport> runScan(String projectPath,
     meta: meta,
     moduleIndex: moduleIndex,
   );
+  report = report.copyWith(
+    capHits: ReportDebug.computeCapHits(results),
+    hotspotMetrics: ReportDebug.computeHotspotMetrics(report),
+  );
+  return report;
 }
 
 /// Flattens findings from [results], sorts deterministically, dedupes by fingerprint.
