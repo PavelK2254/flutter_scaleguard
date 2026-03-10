@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.1]
 
-- Fix project name display when scanning current directory
-- Add scan path to output header
-- Fix Apache license placeholders
-- Improve README with badges
+### Added
+
+- **Scan path in output header** — The console report now shows a "Scan Path:" line with the resolved absolute path used for the scan.
+
+### Fixed
+
+- **Project name display when scanning current directory** — When the resolved path is a root path (e.g. `/` on Unix or a drive root on Windows), the "Project:" line now shows a sensible fallback (`project`) instead of a blank name.
+- **Apache license placeholders** — Placeholder text in license headers has been corrected.
+
+### Documentation
+
+- **README** — Improved with badges and clearer structure.
 
 ---
 

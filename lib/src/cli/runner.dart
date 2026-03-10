@@ -59,9 +59,10 @@ Future<int> runCli(List<String> arguments) async {
 }
 
 /// True when [rawPath] is current-directory form (e.g. ".", "./").
+/// normalizePath consumes "." segments, so "." becomes ""; only isEmpty is needed.
 bool _isCurrentDirPath(String rawPath) {
   final norm = path_utils.normalizePath(rawPath);
-  return norm == '.' || norm.isEmpty;
+  return norm.isEmpty;
 }
 
 /// Resolved path for scanning, display name for "Project:", and scan path for "Scan Path:".
@@ -71,10 +72,9 @@ bool _isCurrentDirPath(String rawPath) {
       ? Directory.current.path
       : dir.absolute.path;
   final displayName = _isCurrentDirPath(rawPath)
-      ? (path_utils.normalizePath(resolvedPath).split('/').lastWhere((s) => s.isNotEmpty, orElse: () => ''))
+      ? (path_utils.normalizePath(resolvedPath).split('/').lastWhere((s) => s.isNotEmpty, orElse: () => 'project'))
       : rawPath;
-  final scanPath = path_utils.normalizePath(resolvedPath);
-  return (resolvedPath, displayName, scanPath);
+  return (resolvedPath, displayName, path_utils.normalizePath(resolvedPath));
 }
 
 Future<int> _runScan(String rawPath,

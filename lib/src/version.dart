@@ -8,11 +8,16 @@ import 'package:yaml/yaml.dart';
 const String fallbackPackageVersion = '0.4.1';
 
 /// Loads the package version from [pubspec.yaml] so the CLI banner stays in sync.
-/// Returns [fallbackPackageVersion] if resolution or parsing fails.
+/// Returns [fallbackPackageVersion] if resolution or parsing fails (e.g. in tests, AOT).
 Future<String> getPackageVersion() async {
-  final packageRoot = await Isolate.resolvePackageUri(
-    Uri.parse('package:scale_guard/'),
-  );
+  Uri? packageRoot;
+  try {
+    packageRoot = await Isolate.resolvePackageUri(
+      Uri.parse('package:scale_guard/'),
+    );
+  } on UnsupportedError {
+    return fallbackPackageVersion;
+  }
   if (packageRoot == null || !packageRoot.isScheme('file')) {
     return fallbackPackageVersion;
   }
