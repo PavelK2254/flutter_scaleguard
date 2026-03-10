@@ -251,5 +251,38 @@ void main() {
       expect(list.first.severity, FindingSeverity.high);
       expect(list.last.severity, FindingSeverity.medium);
     });
+
+    test('scan . shows folder name as Project and absolute path as Scan Path', () async {
+      final projectRoot = Directory.current.path;
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', '.'],
+        runInShell: true,
+        workingDirectory: projectRoot,
+      );
+      expect(result.exitCode, isIn([0, 1]));
+      final parts = projectRoot.replaceAll(r'\', '/').split('/');
+      final nonEmpty = parts.where((String s) => s.isNotEmpty).toList();
+      final expectedBasename = nonEmpty.isEmpty ? 'project' : nonEmpty.last;
+      expect(result.stdout, contains('Project: $expectedBasename'));
+      expect(result.stdout, isNot(contains('Project: .')));
+      final scanPathLines = (result.stdout as String).split('\n').where((String l) => l.startsWith('Scan Path:'));
+      expect(scanPathLines, isNotEmpty);
+      final expectedPath = Directory(projectRoot).absolute.path;
+      expect(scanPathLines.first, contains(expectedPath));
+    });
+
+    test('scan with explicit path shows path as Project and Scan Path as resolved absolute', () async {
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path],
+        runInShell: true,
+        workingDirectory: Directory.current.path,
+      );
+      expect(result.exitCode, isIn([0, 1]));
+      expect(result.stdout, contains('Scan Path:'));
+      final expectedPath = Directory(Directory.current.path).absolute.path;
+      expect(result.stdout, contains(expectedPath));
+    });
   });
 }

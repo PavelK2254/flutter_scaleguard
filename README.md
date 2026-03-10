@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="./assets/logo.png" width="200" alt="Flutter ScaleGuard">
+</p>
+
+[![pub package](https://img.shields.io/pub/v/scale_guard.svg)](https://pub.dev/packages/scale_guard)
+[![pub points](https://img.shields.io/pub/points/scale_guard)](https://pub.dev/packages/scale_guard/score)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 # Flutter ScaleGuard
 
 Architecture health check for Flutter apps.

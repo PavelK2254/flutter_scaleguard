@@ -201,7 +201,10 @@ List<Rule> get defaultRules => [
 
 /// Runs a full scan: loads config, builds index, runs [rules], computes score, returns report.
 Future<ScanReport> runScan(String projectPath,
-    {ScannerConfig? config, List<Rule>? rules}) async {
+    {ScannerConfig? config,
+    List<Rule>? rules,
+    String? projectDisplayName,
+    String? scanPath}) async {
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
   final (:index, :meta, :moduleIndex) = await buildIndexWithMeta(projectPath, resolvedConfig);
   final ruleList = rules ?? defaultRules;
@@ -223,6 +226,8 @@ Future<ScanReport> runScan(String projectPath,
     uniqueFindings: uniqueFindings,
     timestamp: DateTime.now().toUtc(),
     projectPath: projectPath,
+    projectDisplayName: projectDisplayName,
+    scanPath: scanPath,
     aggregation: aggregation,
     meta: meta,
     moduleIndex: moduleIndex,

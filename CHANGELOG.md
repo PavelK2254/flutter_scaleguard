@@ -5,6 +5,15 @@ All notable changes to Flutter ScaleGuard are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1]
+
+- Fix project name display when scanning current directory
+- Add scan path to output header
+- Fix Apache license placeholders
+- Improve README with badges
+
+---
+
 ## [0.4.0]
 
 ### Documentation
@@ -47,4 +56,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.4.1]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.4.1
 [0.4.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.4.0
