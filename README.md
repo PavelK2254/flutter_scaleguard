@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="./assets/logo.png" width="200" alt="Flutter ScaleGuard">
-</p>
+<img src="./assets/logo.png" width="200" alt="Flutter ScaleGuard">
 
 [![pub package](https://img.shields.io/pub/v/scale_guard.svg)](https://pub.dev/packages/scale_guard)
 [![pub points](https://img.shields.io/pub/points/scale_guard)](https://pub.dev/packages/scale_guard/score)

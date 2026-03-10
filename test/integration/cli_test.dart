@@ -268,7 +268,7 @@ void main() {
       expect(result.stdout, isNot(contains('Project: .')));
       final scanPathLines = (result.stdout as String).split('\n').where((String l) => l.startsWith('Scan Path:'));
       expect(scanPathLines, isNotEmpty);
-      final expectedPath = Directory(projectRoot).absolute.path;
+      final expectedPath = projectRoot.replaceAll(r'\', '/');
       expect(scanPathLines.first, contains(expectedPath));
     });
 
@@ -281,8 +281,27 @@ void main() {
       );
       expect(result.exitCode, isIn([0, 1]));
       expect(result.stdout, contains('Scan Path:'));
-      final expectedPath = Directory(Directory.current.path).absolute.path;
+      final expectedPath = Directory.current.path.replaceAll(r'\', '/');
       expect(result.stdout, contains(expectedPath));
+    });
+
+    test('Scan Path line is normalized and contains no . or .. segments', () async {
+      final projectRoot = Directory.current.path;
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', 'test/..'],
+        runInShell: true,
+        workingDirectory: projectRoot,
+      );
+      expect(result.exitCode, isIn([0, 1]));
+      final stdout = result.stdout as String;
+      final scanPathLines = stdout.split('\n').where((String l) => l.startsWith('Scan Path:'));
+      expect(scanPathLines, isNotEmpty);
+      final scanPathValue = scanPathLines.first.replaceFirst('Scan Path: ', '').trim();
+      expect(scanPathValue, isNot(contains('..')), reason: 'Scan Path must not contain ..');
+      expect(scanPathValue, isNot(contains('/./')), reason: 'Scan Path must not contain /.');
+      expect(scanPathValue, contains(projectRoot.replaceAll(r'\', '/')),
+          reason: 'Scan Path should be absolute path to project root');
     });
   });
 }

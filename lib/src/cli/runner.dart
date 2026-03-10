@@ -73,7 +73,7 @@ bool _isCurrentDirPath(String rawPath) {
   final displayName = _isCurrentDirPath(rawPath)
       ? (path_utils.normalizePath(resolvedPath).split('/').lastWhere((s) => s.isNotEmpty, orElse: () => ''))
       : rawPath;
-  final scanPath = resolvedPath;
+  final scanPath = path_utils.normalizePath(resolvedPath);
   return (resolvedPath, displayName, scanPath);
 }
 
