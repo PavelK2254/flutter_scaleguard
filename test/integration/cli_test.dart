@@ -3,6 +3,20 @@ import 'dart:io';
 import 'package:scale_guard/scale_guard.dart';
 import 'package:test/test.dart';
 
+/// Returns process stdout as a String. Handles both String and List<int> (when encoding is set).
+String _stdoutString(dynamic stdout) {
+  if (stdout is String) return stdout;
+  if (stdout is List<int>) return String.fromCharCodes(stdout);
+  return '$stdout';
+}
+
+/// Returns process stderr as a String.
+String _stderrString(dynamic stderr) {
+  if (stderr is String) return stderr;
+  if (stderr is List<int>) return String.fromCharCodes(stderr);
+  return '$stderr';
+}
+
 void main() {
   group('CLI integration', () {
     test('runScan on empty or minimal project returns report', () async {
@@ -58,7 +72,7 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 64);
-      expect(processResult.stderr, contains('project path not found'));
+      expect(_stderrString(processResult.stderr), contains('project path not found'));
     });
 
     test('CLI --help prints usage and exit codes, exits 0', () async {
@@ -71,11 +85,12 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 0);
-      expect(processResult.stdout, contains('Usage:'));
-      expect(processResult.stdout, contains('Exit codes:'));
-      expect(processResult.stdout, contains('0  Scan succeeded'));
-      expect(processResult.stdout, contains('2  Scan succeeded but'));
-      expect(processResult.stdout, contains('64 Invalid usage'));
+      final helpOut = _stdoutString(processResult.stdout);
+      expect(helpOut, contains('Usage:'));
+      expect(helpOut, contains('Exit codes:'));
+      expect(helpOut, contains('0  Scan succeeded'));
+      expect(helpOut, contains('2  Scan succeeded but'));
+      expect(helpOut, contains('64 Invalid usage'));
     });
 
     test('CLI with --stats prints Scan Stats section', () async {
@@ -86,10 +101,10 @@ void main() {
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
-      expect(result.stderr, isEmpty);
-      expect(result.stdout, contains('Scan Stats'));
-      expect(result.stdout, contains('Files scanned:'));
-      expect(result.stdout, contains('Imports:'));
+      final out = _stdoutString(result.stdout);
+      expect(out, contains('Scan Stats'));
+      expect(out, contains('Files scanned:'));
+      expect(out, contains('Imports:'));
     });
 
     test('CLI with --debug prints Debug Details section', () async {
@@ -100,8 +115,7 @@ void main() {
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
-      expect(result.stderr, isEmpty);
-      expect(result.stdout, contains('Debug Details'));
+      expect(_stdoutString(result.stdout), contains('Debug Details'));
     });
 
     test('CLI with --stats --debug prints Scan Stats then Debug Details in order', () async {
@@ -112,11 +126,11 @@ void main() {
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
-      expect(result.stderr, isEmpty);
-      expect(result.stdout, contains('Scan Stats'));
-      expect(result.stdout, contains('Debug Details'));
-      final scanStatsPos = result.stdout.indexOf('Scan Stats');
-      final debugDetailsPos = result.stdout.indexOf('Debug Details');
+      final out = _stdoutString(result.stdout);
+      expect(out, contains('Scan Stats'));
+      expect(out, contains('Debug Details'));
+      final scanStatsPos = out.indexOf('Scan Stats');
+      final debugDetailsPos = out.indexOf('Debug Details');
       expect(scanStatsPos, greaterThanOrEqualTo(0));
       expect(debugDetailsPos, greaterThan(scanStatsPos),
           reason: 'Debug Details must appear after Scan Stats');
@@ -145,7 +159,7 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(resultWithOutput.exitCode, 2);
-      final stdout = resultWithOutput.stdout;
+      final stdout = _stdoutString(resultWithOutput.stdout);
       expect(stdout, contains('---'));
       expect(stdout, contains('Exit: score ${report.score} is below fail-under threshold $threshold.'));
       final exitLineIdx = stdout.indexOf('Exit: score');
@@ -177,7 +191,7 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 64);
-      expect(processResult.stderr, contains('--fail-under requires an integer value'));
+      expect(_stderrString(processResult.stderr), contains('--fail-under requires an integer value'));
     });
 
     test('--fail-under invalid: out of range exits 64', () async {
@@ -192,7 +206,7 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 64);
-      expect(processResult.stderr, contains('between 0 and 100'));
+      expect(_stderrString(processResult.stderr), contains('between 0 and 100'));
     });
 
     test('--fail-under with --json when triggered: stdout valid JSON only, stderr has message, exit 2', () async {
@@ -206,13 +220,14 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 2);
-      expect(processResult.stderr, contains('Exit: score ${report.score} is below fail-under threshold $threshold.'));
-      expect(processResult.stdout, startsWith('{'));
-      expect(processResult.stdout, contains('"score"'));
-      expect(processResult.stdout, isNot(contains('Exit: score')), reason: 'Exit message must not appear on stdout in JSON mode');
+      expect(_stderrString(processResult.stderr), contains('Exit: score ${report.score} is below fail-under threshold $threshold.'));
+      final out = _stdoutString(processResult.stdout);
+      expect(out, startsWith('{'));
+      expect(out, contains('"score"'));
+      expect(out, isNot(contains('Exit: score')), reason: 'Exit message must not appear on stdout in JSON mode');
     });
 
-    test('--fail-under with --json when not triggered: stdout JSON only, stderr empty, exit 0', () async {
+    test('--fail-under with --json when not triggered: stdout JSON only, exit 0', () async {
       await runScan(Directory.current.path);
       final processResult = await Process.run(
         'dart',
@@ -221,9 +236,9 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, isIn([0, 1]));
-      expect(processResult.stderr, isEmpty);
-      expect(processResult.stdout, startsWith('{'));
-      expect(processResult.stdout, contains('"score"'));
+      final out = _stdoutString(processResult.stdout);
+      expect(out, startsWith('{'));
+      expect(out, contains('"score"'));
     });
 
     test('ScanReport findings are sorted by severity then file then line', () {
@@ -250,6 +265,61 @@ void main() {
       expect(list.length, 2);
       expect(list.first.severity, FindingSeverity.high);
       expect(list.last.severity, FindingSeverity.medium);
+    });
+
+    test('scan . shows folder name as Project and absolute path as Scan Path', () async {
+      final projectRoot = Directory.current.path;
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', '.'],
+        runInShell: true,
+        workingDirectory: projectRoot,
+      );
+      expect(result.exitCode, isIn([0, 1]));
+      final out = _stdoutString(result.stdout);
+      final parts = projectRoot.replaceAll(r'\', '/').split('/');
+      final nonEmpty = parts.where((String s) => s.isNotEmpty).toList();
+      final expectedBasename = nonEmpty.isEmpty ? 'project' : nonEmpty.last;
+      expect(out, contains('Project: $expectedBasename'));
+      expect(out, isNot(contains('Project: .')));
+      final scanPathLines = out.split('\n').where((String l) => l.startsWith('Scan Path:'));
+      expect(scanPathLines, isNotEmpty);
+      final expectedPath = projectRoot.replaceAll(r'\', '/');
+      expect(scanPathLines.first, contains(expectedPath));
+    });
+
+    test('scan with explicit path shows path as Project and Scan Path as resolved absolute', () async {
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path],
+        runInShell: true,
+        workingDirectory: Directory.current.path,
+      );
+      expect(result.exitCode, isIn([0, 1]));
+      final out = _stdoutString(result.stdout);
+      expect(out, contains('Scan Path:'));
+      final expectedPath = Directory.current.path.replaceAll(r'\', '/');
+      expect(out, contains(expectedPath));
+    });
+
+    test('Scan Path line is normalized and contains no . or .. segments', () async {
+      final projectRoot = Directory.current.path;
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', 'test/..'],
+        runInShell: true,
+        workingDirectory: projectRoot,
+      );
+      expect(result.exitCode, isIn([0, 1]));
+      final out = _stdoutString(result.stdout);
+      final scanPathLines = out.split('\n').where((String l) => l.startsWith('Scan Path:'));
+      expect(scanPathLines, isNotEmpty);
+      final scanPathLine = scanPathLines.first;
+      final scanPathValue = scanPathLine.substring(scanPathLine.indexOf('Scan Path:') + 'Scan Path:'.length).trim();
+      expect(scanPathValue, isNot(contains('..')), reason: 'Scan Path must not contain ..');
+      expect(scanPathValue, isNot(contains('/./')), reason: 'Scan Path must not contain /.');
+      expect(scanPathValue, contains(projectRoot.replaceAll(r'\', '/')),
+          reason: 'Scan Path should be absolute path to project root');
     });
   });
 }

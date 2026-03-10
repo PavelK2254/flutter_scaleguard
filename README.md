@@ -1,3 +1,9 @@
+[![pub package](https://img.shields.io/pub/v/scale_guard.svg)](https://pub.dev/packages/scale_guard)
+[![pub points](https://img.shields.io/pub/points/scale_guard)](https://pub.dev/packages/scale_guard/score)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+<img src="./assets/logo.png" width="200" alt="Flutter ScaleGuard">
+
 # Flutter ScaleGuard
 
 Architecture health check for Flutter apps.
@@ -35,8 +41,8 @@ scale_guard scan .
 # Example Output
 
 ```text
-Flutter ScaleGuard v0.4.0
-Project: ../flarehabit
+Flutter ScaleGuard v0.4.1
+Project: ./my_flutter_app
 
 Architecture Score: 69/100
 Risk Level: Medium
@@ -47,8 +53,8 @@ This codebase shows early-stage coupling patterns that may reduce feature isolat
 Dominant Risk Category: Coupling Risk (69% of total penalty)
 Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-15.0)
 
-Hotspot (source): lib/features/habit_details
-Hotspot (target): lib/features/habits
+Hotspot (source): lib/features/user_profile
+Hotspot (target): lib/features/dashboard
 ```
 
 ---
@@ -228,6 +234,19 @@ ScaleGuard is useful when:
 - reviewing architecture health during development
 - preventing architecture decay in CI
 - identifying refactoring hotspots
+
+---
+
+# Author
+
+**Pavel Koifman**
+
+Mobile Strategy & Architecture for Founders
+
+Creator of **ScaleGuard** – Flutter architecture health check.
+
+- GitHub: https://github.com/PavelK2254
+- LinkedIn: https://www.linkedin.com/in/pavel-koifman/
 
 ---
 

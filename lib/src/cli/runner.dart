@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../core/path_utils.dart' as path_utils;
 import '../core/scanner.dart';
 import '../model/risk_level.dart';
 import '../render/console_renderer.dart';
@@ -49,26 +50,48 @@ Future<int> runCli(List<String> arguments) async {
     print('Use --help for exit codes and options.');
     return 64;
   }
-  final projectPath = args[1];
-  return _runScan(projectPath,
+  final rawPath = args[1];
+  return _runScan(rawPath,
       jsonOutput: json,
       showStats: stats,
       showDebug: debug,
       failUnder: failUnder);
 }
 
-Future<int> _runScan(String projectPath,
+/// True when [rawPath] is current-directory form (e.g. ".", "./").
+/// normalizePath consumes "." segments, so "." becomes ""; only isEmpty is needed.
+bool _isCurrentDirPath(String rawPath) {
+  final norm = path_utils.normalizePath(rawPath);
+  return norm.isEmpty;
+}
+
+/// Resolved path for scanning, display name for "Project:", and scan path for "Scan Path:".
+(String resolvedPath, String displayName, String scanPath) _resolvePath(String rawPath) {
+  final dir = Directory(rawPath);
+  final resolvedPath = _isCurrentDirPath(rawPath)
+      ? Directory.current.path
+      : dir.absolute.path;
+  final displayName = _isCurrentDirPath(rawPath)
+      ? (path_utils.normalizePath(resolvedPath).split('/').lastWhere((s) => s.isNotEmpty, orElse: () => 'project'))
+      : rawPath;
+  return (resolvedPath, displayName, path_utils.normalizePath(resolvedPath));
+}
+
+Future<int> _runScan(String rawPath,
     {required bool jsonOutput,
     bool showStats = false,
     bool showDebug = false,
     int? failUnder}) async {
-  final dir = Directory(projectPath);
+  final dir = Directory(rawPath);
   if (!await dir.exists() ||
       !await dir.stat().then((s) => s.type == FileSystemEntityType.directory)) {
-    stderr.writeln('Error: project path not found or not a directory: $projectPath');
+    stderr.writeln('Error: project path not found or not a directory: $rawPath');
     return 64;
   }
-  final report = await runScan(projectPath);
+  final (resolvedPath, displayName, scanPath) = _resolvePath(rawPath);
+  final report = await runScan(resolvedPath,
+      projectDisplayName: displayName,
+      scanPath: scanPath);
   if (jsonOutput) {
     final version = await getPackageVersion();
     print(JsonRenderer.render(report, version: version));

@@ -697,6 +697,27 @@ void main() {
   });
 
   group('Console output flags', () {
+    test('header shows projectDisplayName and scanPath when set, in order', () {
+      final report = ScanReport(
+        score: 80,
+        riskLevel: RiskLevel.low,
+        ruleResults: [],
+        uniqueFindings: [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        projectPath: '/path/to/project',
+        projectDisplayName: 'my_project',
+        scanPath: '/resolved/abs/path/my_project',
+      );
+      final lines = _capturePrint(() => ConsoleRenderer.render(report));
+      final projectIdx = lines.indexWhere((l) => l.startsWith('Project:'));
+      final scanPathIdx = lines.indexWhere((l) => l.startsWith('Scan Path:'));
+      expect(projectIdx, greaterThanOrEqualTo(0));
+      expect(scanPathIdx, greaterThanOrEqualTo(0));
+      expect(scanPathIdx, equals(projectIdx + 1), reason: 'Scan Path must follow Project');
+      expect(lines[projectIdx], equals('Project: my_project'));
+      expect(lines[scanPathIdx], equals('Scan Path: /resolved/abs/path/my_project'));
+    });
+
     test('default output snapshot: required sections present in order, no debug blocks', () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 5, findings: []),
@@ -719,6 +740,7 @@ void main() {
       final full = lines.join('\n');
       expect(full, contains('Flutter ScaleGuard'));
       expect(full, contains('Project: project'));
+      expect(full, contains('Scan Path: project'));
       expect(full, contains('Architecture Score: 95/100'));
       expect(full, contains('Findings by Category:'));
       expect(full, contains('Top Hotspots:'));

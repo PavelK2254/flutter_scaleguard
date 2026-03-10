@@ -13,6 +13,8 @@ class ScanReport {
     required this.uniqueFindings,
     required this.timestamp,
     this.projectPath,
+    this.projectDisplayName,
+    this.scanPath,
     this.aggregation,
     this.meta,
     this.moduleIndex,
@@ -27,6 +29,10 @@ class ScanReport {
   final List<Finding> uniqueFindings;
   final DateTime timestamp;
   final String? projectPath;
+  /// Friendly display name for console (e.g. basename when user scans ".").
+  final String? projectDisplayName;
+  /// Resolved absolute path of the scan target for header display.
+  final String? scanPath;
   final CategoryAggregation? aggregation;
   final ScanMeta? meta;
   /// Map from normalized file path to module root key (e.g. lib/feature/add_card). Built during scan.
@@ -44,6 +50,8 @@ class ScanReport {
     List<Finding>? uniqueFindings,
     DateTime? timestamp,
     String? projectPath,
+    String? projectDisplayName,
+    String? scanPath,
     CategoryAggregation? aggregation,
     ScanMeta? meta,
     Map<String, String>? moduleIndex,
@@ -57,6 +65,8 @@ class ScanReport {
       uniqueFindings: uniqueFindings ?? this.uniqueFindings,
       timestamp: timestamp ?? this.timestamp,
       projectPath: projectPath ?? this.projectPath,
+      projectDisplayName: projectDisplayName ?? this.projectDisplayName,
+      scanPath: scanPath ?? this.scanPath,
       aggregation: aggregation ?? this.aggregation,
       meta: meta ?? this.meta,
       moduleIndex: moduleIndex ?? this.moduleIndex,

@@ -26,7 +26,8 @@ class ConsoleRenderer {
     final v = version ?? fallbackPackageVersion;
     final versionLabel = v.startsWith('v') ? v : 'v$v';
     print('Flutter ScaleGuard $versionLabel');
-    print('Project: ${report.projectPath ?? '<unknown>'}');
+    print('Project: ${report.projectDisplayName ?? report.projectPath ?? '<unknown>'}');
+    print('Scan Path: ${report.scanPath ?? report.projectPath ?? '<unknown>'}');
     print('');
     print('Architecture Score: ${report.score}/100');
     print('Risk Level: ${_riskLevelLabel(report.riskLevel)}');
