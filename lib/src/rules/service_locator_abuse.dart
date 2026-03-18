@@ -19,6 +19,12 @@ class ServiceLocatorAbuseRule implements Rule {
   @override
   double get cap => ruleIdToCap[id]!;
 
+  @override
+  String get description => ruleIdToDescription[id] ?? '';
+
+  @override
+  String get suggestion => ruleIdToSuggestion[id] ?? '';
+
   static bool _isDiPath(String normalizedPath) {
     return normalizedPath.startsWith('lib/di/') ||
         normalizedPath.startsWith('lib/core/di/');

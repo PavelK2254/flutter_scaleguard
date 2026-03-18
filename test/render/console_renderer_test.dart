@@ -262,8 +262,6 @@ void main() {
       final fullOutput = lines.join('\n');
       expect(fullOutput, contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk]));
       expect(fullOutput, isNot(contains(meta.categoryToSummary[meta.categoryCouplingRisk])));
-      expect(fullOutput, contains(meta.categoryToWhySoft[meta.categoryCouplingRisk]));
-      expect(fullOutput, isNot(contains(meta.categoryToWhyStandard[meta.categoryCouplingRisk])));
       final dominantLine = lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
       expect(dominantLine, contains(', low intensity)'));
     });
@@ -300,8 +298,6 @@ void main() {
       final fullOutput = lines.join('\n');
       expect(fullOutput, contains(meta.categoryToSummary[meta.categoryCouplingRisk]));
       expect(fullOutput, isNot(contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk])));
-      expect(fullOutput, contains(meta.categoryToWhyStandard[meta.categoryCouplingRisk]));
-      expect(fullOutput, isNot(contains(meta.categoryToWhySoft[meta.categoryCouplingRisk])));
       final dominantLine = lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
       expect(dominantLine, isNot(contains('low intensity')));
     });
@@ -362,28 +358,28 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
-      final topHotspotsStart = lines.indexWhere((l) => l == 'Top Hotspots:');
-      expect(topHotspotsStart, greaterThanOrEqualTo(0));
-      final topHotspotsBlock = lines
-          .skip(topHotspotsStart + 2)
-          .takeWhile((l) => l.isNotEmpty)
+      final hotspotsStart = lines.indexWhere((l) => l == 'Hotspots:');
+      expect(hotspotsStart, greaterThanOrEqualTo(0));
+      final hotspotsBlock = lines
+          .skip(hotspotsStart + 2)
+          .takeWhile((l) => l != '---')
           .toList();
 
       // Must show module-level roots, not a single coarse lib/feature.
       expect(
-        topHotspotsBlock.any((l) => l.startsWith('lib/feature/add_card (')),
+        hotspotsBlock.any((l) => l.startsWith('lib/feature/add_card (')),
         isTrue,
       );
       expect(
-        topHotspotsBlock.any((l) => l.startsWith('lib/feature/buy_gift_card (')),
+        hotspotsBlock.any((l) => l.startsWith('lib/feature/buy_gift_card (')),
         isTrue,
       );
       expect(
-        topHotspotsBlock.any((l) => l.startsWith('lib/feature/card_management (')),
+        hotspotsBlock.any((l) => l.startsWith('lib/feature/card_management (')),
         isTrue,
       );
       // Must NOT collapse to a single "lib/feature (" line.
-      final coarseLine = topHotspotsBlock.where((l) => l.startsWith('lib/feature (') && !l.startsWith('lib/feature/'));
+      final coarseLine = hotspotsBlock.where((l) => l.startsWith('lib/feature (') && !l.startsWith('lib/feature/'));
       expect(coarseLine.length, 0, reason: 'Hotspots must be module-level, not coarse lib/feature');
     });
   });
@@ -743,18 +739,18 @@ void main() {
       expect(full, contains('Scan Path: project'));
       expect(full, contains('Architecture Score: 95/100'));
       expect(full, contains('Findings by Category:'));
-      expect(full, contains('Top Hotspots:'));
-      expect(full, contains('Why This Matters:'));
+      expect(full, contains('Tip:'));
+      expect(full, contains('Use ScaleGuard in CI to prevent architecture drift'));
       expect(full, isNot(contains('Debug Details')));
       expect(full, isNot(contains('Penalty by Category')));
       expect(full, isNot(contains('Scan Stats')));
       expect(full, isNot(contains('reached its penalty cap')),
           reason: 'No cap-hit note when capHits empty/absent');
+      // With no findings, Top Fix Priorities and Hotspots are omitted; order: Findings by Category then CI Tip.
       final findingsIdx = lines.indexOf('Findings by Category:');
-      final topHotspotsIdx = lines.indexOf('Top Hotspots:');
-      final whyIdx = lines.indexOf('Why This Matters:');
-      expect(findingsIdx, lessThan(topHotspotsIdx));
-      expect(topHotspotsIdx, lessThan(whyIdx));
+      final tipIdx = lines.indexOf('Tip:');
+      expect(findingsIdx, greaterThanOrEqualTo(0));
+      expect(tipIdx, greaterThan(findingsIdx));
       expect(lines.where((l) => l == '---').length, greaterThanOrEqualTo(2),
           reason: 'Section separators must be exactly ---');
     });

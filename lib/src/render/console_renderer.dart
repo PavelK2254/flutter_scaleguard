@@ -99,16 +99,15 @@ class ConsoleRenderer {
       print('');
       print('---');
       print('');
+      if (report.uniqueFindings.isNotEmpty) {
+        _printTopFixPriorities(report);
+        print('');
+        _printHotspots(report);
+        print('---');
+        print('');
+      }
       _printFindingsByCategory(report, agg);
-      print('---');
-      print('');
-      _printTopHotspots(report);
-      print('---');
-      print('');
-      final whyMap = useSoft ? categoryToWhySoft : categoryToWhyStandard;
-      final why = whyMap[agg.dominantCategory] ?? '';
-      print('Why This Matters:');
-      print(why);
+      _printCITip();
       if (showStats && report.meta != null) _printScanStats(report);
       if (showDebug) _printDebugDetails(report);
     } else {
@@ -385,9 +384,26 @@ class ConsoleRenderer {
         final fileCount = forRule.map((f) => f.file).toSet().length;
         final label = ruleIdToDisplayLabel[r.ruleId] ?? r.ruleId;
         print('  - $label ($uniqueCount across $fileCount files)');
+        final description = ruleIdToDescription[r.ruleId] ?? '';
+        if (description.isNotEmpty) {
+          print('  $description');
+        }
+        final suggestion = ruleIdToSuggestion[r.ruleId] ?? '';
+        if (suggestion.isNotEmpty) {
+          print('  Suggestion: $suggestion');
+        }
       }
       print('');
     }
+  }
+
+  static void _printCITip() {
+    print('---');
+    print('');
+    print('Tip:');
+    print(
+        'Use ScaleGuard in CI to prevent architecture drift:');
+    print('scale_guard scan . --fail-under 70');
   }
 
   /// Prints penalty totals by category when [aggregation.totalPenalty] > 0.
@@ -420,31 +436,84 @@ class ConsoleRenderer {
     return moduleRootKey(norm);
   }
 
-  static void _printTopHotspots(ScanReport report) {
-    print('Top Hotspots:');
-    print('');
-    final ordered = HotspotUtils.getOrderedHotspotEntries(report);
-    if (ordered.isEmpty) return;
+  /// Per-path, per-rule finding counts. Used by Top Fix Priorities and Hotspots.
+  static Map<String, Map<String, int>> _getRuleCountByPath(ScanReport report) {
     final ruleCountByKey = <String, Map<String, int>>{};
     for (final f in report.uniqueFindings) {
       final key = HotspotUtils.getSourceHotspotKey(f, report);
       ruleCountByKey[key] ??= {};
       ruleCountByKey[key]![f.ruleId] = (ruleCountByKey[key]![f.ruleId] ?? 0) + 1;
     }
-    final top3 = ordered.take(3).toList();
-    for (final e in top3) {
+    return ruleCountByKey;
+  }
+
+  /// Dominant rule for a path: rule with highest count; ties broken by rule id asc.
+  static String? _dominantRuleForPath(Map<String, int> ruleCounts) {
+    if (ruleCounts.isEmpty) return null;
+    final entries = ruleCounts.entries.toList()
+      ..sort((a, b) {
+        final byCount = b.value.compareTo(a.value);
+        if (byCount != 0) return byCount;
+        return a.key.compareTo(b.key);
+      });
+    return entries.first.key;
+  }
+
+  /// First line or sentence of suggestion for use as short hint. Returns null if empty.
+  static String? _shortHint(String suggestion) {
+    final t = suggestion.trim();
+    if (t.isEmpty) return null;
+    final firstLine = t.contains('\n') ? t.substring(0, t.indexOf('\n')).trim() : t;
+    final firstSentence = firstLine.contains('.')
+        ? firstLine.substring(0, firstLine.indexOf('.') + 1).trim()
+        : firstLine;
+    return firstSentence.isEmpty ? null : firstSentence;
+  }
+
+  static void _printTopFixPriorities(ScanReport report) {
+    final ordered = HotspotUtils.getOrderedHotspotEntries(report);
+    if (ordered.isEmpty) return;
+    final ruleCountByKey = _getRuleCountByPath(report);
+    final topN = ordered.take(3).toList();
+    print('Top Fix Priorities:');
+    print('');
+    for (var i = 0; i < topN.length; i++) {
+      final e = topN[i];
       final ruleCounts = ruleCountByKey[e.path] ?? {};
-      final topRules = ruleCounts.entries.toList()
+      final dominant = _dominantRuleForPath(ruleCounts);
+      print('${i + 1}. ${e.path}');
+      print('   - ${e.count} findings');
+      if (dominant != null) {
+        print('   - dominant: $dominant');
+        final suggestion = ruleIdToSuggestion[dominant] ?? '';
+        final hint = _shortHint(suggestion);
+        if (hint != null && hint.isNotEmpty) {
+          print('   - $hint');
+        }
+      }
+      print('');
+    }
+  }
+
+  static void _printHotspots(ScanReport report) {
+    print('Hotspots:');
+    print('');
+    final ordered = HotspotUtils.getOrderedHotspotEntries(report);
+    if (ordered.isEmpty) return;
+    final ruleCountByKey = _getRuleCountByPath(report);
+    for (final e in ordered) {
+      print('${e.path} (${e.count} findings)');
+      final ruleCounts = ruleCountByKey[e.path] ?? {};
+      final sorted = ruleCounts.entries.toList()
         ..sort((a, b) {
           final byCount = b.value.compareTo(a.value);
           if (byCount != 0) return byCount;
           return a.key.compareTo(b.key);
         });
-      final top2 = topRules.take(2).toList();
-      final rulePart = top2.isEmpty
-          ? ''
-          : ' — ${top2.map((r) => '${r.key}: ${r.value}').join(', ')}';
-      print('${e.path} (${e.count} findings)$rulePart');
+      for (final r in sorted) {
+        print('  - ${r.key}: ${r.value}');
+      }
+      print('');
     }
   }
 
