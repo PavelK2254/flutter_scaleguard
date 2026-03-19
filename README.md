@@ -70,7 +70,7 @@ Top Fix Priorities:
 2. lib/features/dashboard
    - 28 findings
    - dominant: cross_feature_coupling
-   - Move shared contracts into a shared domain layer or introduce an abstraction.
+   - Avoid direct feature-to-feature imports.
 
 
 Hotspots:

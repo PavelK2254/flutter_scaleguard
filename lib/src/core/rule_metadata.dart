@@ -66,7 +66,7 @@ final Map<String, String> ruleIdToDisplayLabel = Map.unmodifiable({
 /// One to two lines explaining the problem. Used for Findings by Category and Top Fix Priorities.
 final Map<String, String> ruleIdToDescription = Map.unmodifiable({
   'cross_feature_coupling':
-      'Features importing each other directly increases coupling and reduces scalability.',
+      'Features importing each other directly increase coupling and reduce scalability.',
   'service_locator_abuse':
       'Global dependency access hides dependencies and reduces architectural clarity.',
   'layer_violations':
