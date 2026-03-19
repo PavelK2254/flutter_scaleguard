@@ -63,6 +63,42 @@ final Map<String, String> ruleIdToDisplayLabel = Map.unmodifiable({
       'Navigation Logic Bypasses Routing Layer (tightens screen coupling)',
 });
 
+/// One to two lines explaining the problem. Used for Findings by Category and Top Fix Priorities.
+final Map<String, String> ruleIdToDescription = Map.unmodifiable({
+  'cross_feature_coupling':
+      'Features importing each other directly increase coupling and reduce scalability.',
+  'service_locator_abuse':
+      'Global dependency access hides dependencies and reduces architectural clarity.',
+  'layer_violations':
+      'Crossing layer boundaries increases coupling and makes refactoring harder.',
+  'god_files':
+      'Large files increase change surface and reduce maintainability.',
+  'hardcoded_scale_risks':
+      'Hardcoded configuration reduces flexibility across environments.',
+  'shared_boundary_leakage':
+      'Shared or common code importing feature modules blurs boundaries and increases coupling.',
+  'navigation_coupling':
+      'Direct route usage bypasses the routing layer and tightens screen coupling.',
+});
+
+/// One to three lines explaining how to fix. Empty string means skip suggestion line in output.
+final Map<String, String> ruleIdToSuggestion = Map.unmodifiable({
+  'cross_feature_coupling':
+      'Avoid direct feature-to-feature imports. Move shared contracts into a shared domain layer or introduce an abstraction.',
+  'service_locator_abuse':
+      'Limit service locator usage to composition roots. Inject dependencies explicitly into classes.',
+  'layer_violations':
+      'Ensure domain does not depend on data or presentation. Move implementations behind interfaces.',
+  'god_files':
+      'Split large files into smaller focused components. Separate responsibilities by layer or feature.',
+  'hardcoded_scale_risks':
+      'Move configuration to environment-based or external config files. Avoid embedding runtime values in code.',
+  'shared_boundary_leakage':
+      'Keep shared modules independent of features. Depend on abstractions or invert dependencies.',
+  'navigation_coupling':
+      'Use a central router or navigation service. Avoid pushing named routes directly from feature code.',
+});
+
 /// Deterministic summary sentence per dominant category (standard intensity).
 final Map<String, String> categoryToSummary = Map.unmodifiable({
   categoryCouplingRisk:

@@ -28,9 +28,9 @@ final _exportRegex = RegExp(r'''export\s+['"]([^'"]+)['"]''');
 final _importCache = <String, String?>{};
 
 /// Builds index and scan meta. For index-only use, call [buildIndex] instead.
-Future<({ProjectIndex index, ScanMeta meta, Map<String, String> moduleIndex})> buildIndexWithMeta(
-    String projectPath, ScannerConfig config,
-    {bool includeLines = true}) async {
+Future<({ProjectIndex index, ScanMeta meta, Map<String, String> moduleIndex})>
+    buildIndexWithMeta(String projectPath, ScannerConfig config,
+        {bool includeLines = true}) async {
   final libDir = Directory('$projectPath/lib');
   if (!await libDir.exists()) {
     return (
@@ -95,7 +95,8 @@ Future<({ProjectIndex index, ScanMeta meta, Map<String, String> moduleIndex})> b
   );
   final moduleIndex = <String, String>{
     for (final f in files)
-      path_utils.normalizePath(f.path): moduleRootKey(path_utils.normalizePath(f.path)),
+      path_utils.normalizePath(f.path):
+          moduleRootKey(path_utils.normalizePath(f.path)),
   };
   return (
     index: ProjectIndex(files: files, packageName: packageName),
@@ -105,10 +106,10 @@ Future<({ProjectIndex index, ScanMeta meta, Map<String, String> moduleIndex})> b
 }
 
 /// Builds [ProjectIndex] from a project directory. For index and [ScanMeta], use [buildIndexWithMeta].
-Future<ProjectIndex> buildIndex(
-    String projectPath, ScannerConfig config,
+Future<ProjectIndex> buildIndex(String projectPath, ScannerConfig config,
     {bool includeLines = true}) async {
-  final result = await buildIndexWithMeta(projectPath, config, includeLines: includeLines);
+  final result =
+      await buildIndexWithMeta(projectPath, config, includeLines: includeLines);
   return result.index;
 }
 
@@ -137,9 +138,8 @@ String _classifyImport(String target, String? resolved, String? packageName) {
   return 'unresolved';
 }
 
-(List<String>, _ImportCounts) _parseImports(
-    String content, String fromPath, String? packageName,
-    Map<String, String?> cache) {
+(List<String>, _ImportCounts) _parseImports(String content, String fromPath,
+    String? packageName, Map<String, String?> cache) {
   final result = <String>[];
   var total = 0;
   var resolvedToProject = 0;
@@ -177,7 +177,10 @@ String _classifyImport(String target, String? resolved, String? packageName) {
       }
     }
   }
-  return (result, _ImportCounts(total, resolvedToProject, externalPackage, unresolved));
+  return (
+    result,
+    _ImportCounts(total, resolvedToProject, externalPackage, unresolved)
+  );
 }
 
 Future<String?> _readPackageName(String projectPath) async {
@@ -206,7 +209,8 @@ Future<ScanReport> runScan(String projectPath,
     String? projectDisplayName,
     String? scanPath}) async {
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
-  final (:index, :meta, :moduleIndex) = await buildIndexWithMeta(projectPath, resolvedConfig);
+  final (:index, :meta, :moduleIndex) =
+      await buildIndexWithMeta(projectPath, resolvedConfig);
   final ruleList = rules ?? defaultRules;
   final results = <RuleResult>[];
   for (final rule in ruleList) {

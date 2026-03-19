@@ -56,7 +56,8 @@ void main() {
 
     test('Windows path normalizes to lib/feature/add_card', () {
       expect(
-        moduleRootKey(path_utils.normalizePath(r'lib\feature\add_card\domain\use_case.dart')),
+        moduleRootKey(path_utils
+            .normalizePath(r'lib\feature\add_card\domain\use_case.dart')),
         'lib/feature/add_card',
       );
     });

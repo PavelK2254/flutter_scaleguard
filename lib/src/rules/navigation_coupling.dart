@@ -17,6 +17,12 @@ class NavigationCouplingRule implements Rule {
   @override
   double get cap => ruleIdToCap[id]!;
 
+  @override
+  String get description => ruleIdToDescription[id] ?? '';
+
+  @override
+  String get suggestion => ruleIdToSuggestion[id] ?? '';
+
   static final _pushNamedRegex =
       RegExp(r'''pushNamed\s*\(\s*[^,]+,\s*['"]([^'"]+)['"]''');
 

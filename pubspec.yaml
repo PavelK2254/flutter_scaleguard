@@ -1,6 +1,6 @@
 name: scale_guard
 description: Deterministic CLI for detecting architectural scale risks in Flutter projects.
-version: 0.4.1
+version: 0.5.0
 homepage: https://github.com/PavelK2254/flutter_scaleguard
 repository: https://github.com/PavelK2254/flutter_scaleguard
 issue_tracker: https://github.com/PavelK2254/flutter_scaleguard/issues

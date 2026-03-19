@@ -41,8 +41,9 @@ scale_guard scan .
 # Example Output
 
 ```text
-Flutter ScaleGuard v0.4.1
+Flutter ScaleGuard v0.5.0
 Project: ./my_flutter_app
+Scan Path: ./my_flutter_app
 
 Architecture Score: 69/100
 Risk Level: Medium
@@ -51,10 +52,55 @@ Summary:
 This codebase shows early-stage coupling patterns that may reduce feature isolation as the team scales.
 
 Dominant Risk Category: Coupling Risk (69% of total penalty)
-Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-15.0)
+Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-15.0) [Coupling Risk] [rule: cross_feature_coupling]
+Hotspot (source): lib/features/user_profile (42 findings)
+Examples:
+  lib/features/user_profile/domain/usecase.dart lib/features/dashboard/repo.dart
+  (+39 more)
 
-Hotspot (source): lib/features/user_profile
-Hotspot (target): lib/features/dashboard
+---
+
+Top Fix Priorities:
+
+1. lib/features/user_profile
+   - 42 findings
+   - dominant: cross_feature_coupling
+   - Avoid direct feature-to-feature imports.
+
+2. lib/features/dashboard
+   - 28 findings
+   - dominant: cross_feature_coupling
+   - Avoid direct feature-to-feature imports.
+
+
+Hotspots:
+
+lib/features/user_profile (42 findings)
+  - cross_feature_coupling: 38
+  - service_locator_abuse: 4
+
+lib/features/dashboard (28 findings)
+  - cross_feature_coupling: 22
+  - hardcoded_scale_risks: 6
+
+---
+
+Findings by Category:
+
+Coupling Risk
+  - Feature Module Imports Another Feature (91 across 31 files)
+  Features importing each other directly increases coupling and reduces scalability.
+  Suggestion: Avoid direct feature-to-feature imports. Move shared contracts into a shared domain layer or introduce an abstraction.
+
+  - Global Dependency Access Across Boundaries (34 across 15 files)
+  Global dependency access hides dependencies and reduces architectural clarity.
+  Suggestion: Limit service locator usage to composition roots. Inject dependencies explicitly into classes.
+
+---
+
+Tip:
+Use ScaleGuard in CI to prevent architecture drift:
+scale_guard scan . --fail-under 70
 ```
 
 ---
@@ -115,13 +161,11 @@ scale_guard scan . --fail-under 70
 
 # Output
 
-ScaleGuard produces a structured report containing:
+ScaleGuard produces a structured report in this order:
 
 ### Architecture Score
 
-Numeric score from **0–100**.
-
-Higher score means lower architectural risk.
+Numeric score from **0–100**. Higher score means lower architectural risk.
 
 ### Risk Level
 
@@ -133,19 +177,37 @@ Risk classification based on score:
 | 55–79 | Medium |
 | 0–54 | High |
 
+### Summary
+
+A short summary of the dominant risk category and its impact.
+
 ### Dominant Risk Category
 
-Identifies the architecture problem contributing most to the score penalty.
+The architecture problem contributing most to the score penalty.
 
 ### Most Expensive Risk
 
-The single rule responsible for the largest score reduction.
+The single rule responsible for the largest score reduction, with optional hotspot (source/target) and example findings.
+
+### Top Fix Priorities
+
+The top 3 modules (by finding count) with the most issues. For each, the report shows the path, total findings, the dominant rule, and a short actionable hint so you know **where to start fixing**.
 
 ### Hotspots
 
-Files or modules where architectural violations concentrate.
+Modules grouped by path, with total findings and a **per-rule breakdown**. Shows where violations concentrate so you can focus refactoring effort.
 
-This helps teams focus refactoring effort where it matters most.
+### Findings by Category
+
+Findings grouped by risk category. For each rule, the report includes:
+
+- Count and file spread
+- A **description** of the problem
+- A **suggestion** on how to fix it
+
+### CI Tip
+
+A short tip at the end of the report on using ScaleGuard in CI to prevent architecture drift.
 
 ---
 
@@ -153,9 +215,10 @@ This helps teams focus refactoring effort where it matters most.
 
 | Code | Meaning |
 |-----|--------|
-| 0 | Scan completed successfully |
-| 1 | Score below `--fail-under` threshold |
-| 64 | Invalid command usage |
+| 0 | Scan succeeded (and passed `--fail-under` if provided) |
+| 1 | High risk (scan succeeded but risk level is High) |
+| 2 | Scan succeeded but `--fail-under` threshold not met |
+| 64 | Invalid usage / invalid project path (e.g., not a directory) |
 
 ---
 
@@ -177,33 +240,28 @@ Example configuration options:
 
 # Rules
 
-ScaleGuard currently detects the following architecture risks:
+ScaleGuard detects the following architecture risks. In the report, each rule includes a **description** (what’s wrong) and a **suggestion** (how to fix it).
 
 ### Cross Feature Coupling
-Feature modules importing other feature modules.
+Feature modules importing other feature modules. *Suggestion: move shared contracts into a shared domain layer or introduce an abstraction.*
 
 ### Layer Violations
-Invalid dependencies between architecture layers.
-
-Example:
-```text
-presentation → data
-```
+Invalid dependencies between architecture layers (e.g. presentation → data). *Suggestion: ensure domain does not depend on data or presentation; move implementations behind interfaces.*
 
 ### God Files
-Files exceeding defined size thresholds.
+Files exceeding defined size thresholds. *Suggestion: split into smaller focused components and separate responsibilities by layer or feature.*
 
 ### Hardcoded Scale Risks
-Configuration values embedded directly in code.
+Configuration values embedded directly in code. *Suggestion: move configuration to environment-based or external config files.*
 
 ### Service Locator Abuse
-Global dependency access patterns.
+Global dependency access patterns. *Suggestion: limit usage to composition roots and inject dependencies explicitly.*
 
 ### Shared Boundary Leakage
-Shared modules importing feature modules.
+Shared modules importing feature modules. *Suggestion: keep shared modules independent of features; depend on abstractions.*
 
 ### Navigation Coupling
-Direct route usage instead of centralized navigation.
+Direct route usage instead of centralized navigation. *Suggestion: use a central router or navigation service.*
 
 ---
 

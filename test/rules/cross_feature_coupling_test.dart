@@ -89,7 +89,8 @@ void main() {
         timestamp: DateTime.now().toUtc(),
         moduleIndex: null,
       );
-      expect(ConsoleRenderer.getSourceHotspotKey(f, report), 'lib/features/achievements');
+      expect(ConsoleRenderer.getSourceHotspotKey(f, report),
+          'lib/features/achievements');
       expect(ConsoleRenderer.getTargetHotspotKey(f), 'lib/features/habits');
     });
   });

@@ -5,6 +5,16 @@ All notable changes to Flutter ScaleGuard are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0]
+
+Improve output usability and developer guidance:
+
+- Add rule descriptions and suggestions
+- Add Top Fix Priorities section
+- Improve hotspot grouping and readability
+- Enhance findings with actionable guidance
+- Add CI usage tip
+
 ## [0.4.1]
 
 ### Added
@@ -64,5 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.5.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.5.0
 [0.4.1]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.4.1
 [0.4.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.4.0

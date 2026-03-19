@@ -5,7 +5,9 @@ import 'package:test/test.dart';
 
 void main() {
   group('JsonRenderer schema versioning', () {
-    test('output includes toolVersion and schemaVersion "1.0", existing fields unchanged', () {
+    test(
+        'output includes toolVersion and schemaVersion "1.0", existing fields unchanged',
+        () {
       final report = ScanReport(
         score: 85,
         riskLevel: RiskLevel.low,
@@ -40,7 +42,9 @@ void main() {
   };
 
   group('JsonRenderer penalties', () {
-    test('penalties block present with total and byCategory when aggregation has penalty', () {
+    test(
+        'penalties block present with total and byCategory when aggregation has penalty',
+        () {
       final results = [
         RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 5, findings: []),
@@ -109,7 +113,9 @@ void main() {
       expect(hm['top3Share'], 0.0);
     });
 
-    test('penalties block when totalPenalty == 0 has total 0, empty byCategory and byRule', () {
+    test(
+        'penalties block when totalPenalty == 0 has total 0, empty byCategory and byRule',
+        () {
       final results = [
         RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 0, findings: []),
@@ -139,7 +145,9 @@ void main() {
   });
 
   group('JsonRenderer hotspotMetrics', () {
-    test('three hotspots: totalFindings, largestHotspot, concentration, top3Share rounded to 4 decimals', () {
+    test(
+        'three hotspots: totalFindings, largestHotspot, concentration, top3Share rounded to 4 decimals',
+        () {
       const pathA = 'lib/features/habit_details/f.dart';
       const pathB = 'lib/features/b/f.dart';
       const pathC = 'lib/features/c/f.dart';
@@ -179,12 +187,16 @@ void main() {
         score: 70,
         riskLevel: RiskLevel.medium,
         ruleResults: [
-          RuleResult(ruleId: 'layer_violations', penalty: 10, findings: findings),
+          RuleResult(
+              ruleId: 'layer_violations', penalty: 10, findings: findings),
         ],
         uniqueFindings: findings,
         timestamp: DateTime.utc(2025, 1, 1),
         aggregation: CategoryAggregation.fromRuleResults(
-          [RuleResult(ruleId: 'layer_violations', penalty: 10, findings: findings)],
+          [
+            RuleResult(
+                ruleId: 'layer_violations', penalty: 10, findings: findings)
+          ],
           {'layer_violations': 'Structural Risk'},
         ),
         moduleIndex: moduleIndex,
@@ -283,8 +295,16 @@ void main() {
     test('capHits sorted ascending by rule id', () {
       // Two rules that hit cap: cross_feature_coupling (cap 15), layer_violations (cap 20)
       final results = [
-        RuleResult(ruleId: 'layer_violations', penalty: 20, riskValue: 100, findings: []),
-        RuleResult(ruleId: 'cross_feature_coupling', penalty: 15, riskValue: 100, findings: []),
+        RuleResult(
+            ruleId: 'layer_violations',
+            penalty: 20,
+            riskValue: 100,
+            findings: []),
+        RuleResult(
+            ruleId: 'cross_feature_coupling',
+            penalty: 15,
+            riskValue: 100,
+            findings: []),
       ];
       final aggregation = CategoryAggregation.fromRuleResults(
         results,

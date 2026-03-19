@@ -19,6 +19,12 @@ class ServiceLocatorAbuseRule implements Rule {
   @override
   double get cap => ruleIdToCap[id]!;
 
+  @override
+  String get description => ruleIdToDescription[id] ?? '';
+
+  @override
+  String get suggestion => ruleIdToSuggestion[id] ?? '';
+
   static bool _isDiPath(String normalizedPath) {
     return normalizedPath.startsWith('lib/di/') ||
         normalizedPath.startsWith('lib/core/di/');
@@ -50,7 +56,8 @@ class ServiceLocatorAbuseRule implements Rule {
         for (var p = 0; p < config.serviceLocatorPatterns.length; p++) {
           final pattern = config.serviceLocatorPatterns[p];
           final re = patternRegexes[p];
-          final matches = re != null ? re.hasMatch(line) : line.contains(pattern);
+          final matches =
+              re != null ? re.hasMatch(line) : line.contains(pattern);
           if (matches) {
             findings.add(Finding(
               severity: FindingSeverity.medium,
@@ -75,9 +82,12 @@ class ServiceLocatorAbuseRule implements Rule {
     return patterns.map((pattern) {
       try {
         final escaped = RegExp.escape(pattern);
-        final startBoundary = pattern.isNotEmpty && RegExp(r'\w').hasMatch(pattern[0]);
-        final endBoundary = pattern.isNotEmpty && RegExp(r'\w').hasMatch(pattern[pattern.length - 1]);
-        final regex = '${startBoundary ? r'\b' : ''}$escaped${endBoundary ? r'\b' : ''}';
+        final startBoundary =
+            pattern.isNotEmpty && RegExp(r'\w').hasMatch(pattern[0]);
+        final endBoundary = pattern.isNotEmpty &&
+            RegExp(r'\w').hasMatch(pattern[pattern.length - 1]);
+        final regex =
+            '${startBoundary ? r'\b' : ''}$escaped${endBoundary ? r'\b' : ''}';
         return RegExp(regex);
       } catch (_) {
         return null;

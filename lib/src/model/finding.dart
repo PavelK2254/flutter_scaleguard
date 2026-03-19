@@ -30,13 +30,16 @@ class Finding {
   final String file;
   final String message;
   final int? line;
+
   /// Set by layer_violations for fingerprint and examples ordering.
   final String? resolvedImportedPath;
   final String? fromLayer;
   final String? toLayer;
+
   /// Set by cross_feature_coupling for examples (fromFeature -> toFeature).
   final String? fromFeature;
   final String? toFeature;
+
   /// Set by cross_feature_coupling for correct hotspot (e.g. lib/features/achievements).
   final String? sourceFeaturePath;
   final String? targetFeaturePath;

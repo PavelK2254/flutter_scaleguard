@@ -18,6 +18,12 @@ class GodFilesRule implements Rule {
   double get cap => ruleIdToCap[id]!;
 
   @override
+  String get description => ruleIdToDescription[id] ?? '';
+
+  @override
+  String get suggestion => ruleIdToSuggestion[id] ?? '';
+
+  @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
     final findings = <Finding>[];
     double riskValue = 0;

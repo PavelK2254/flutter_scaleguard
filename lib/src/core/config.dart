@@ -145,9 +145,9 @@ class ScannerConfig {
       }
     }
 
-    final allowDomainToData =
-        (yaml['allow_domain_to_data'] as bool?) ?? false;
-    if (allowDomainToData && allowedLayerDependencies.containsKey(layerDomain)) {
+    final allowDomainToData = (yaml['allow_domain_to_data'] as bool?) ?? false;
+    if (allowDomainToData &&
+        allowedLayerDependencies.containsKey(layerDomain)) {
       allowedLayerDependencies = Map.from(allowedLayerDependencies);
       allowedLayerDependencies[layerDomain] = {
         ...?allowedLayerDependencies[layerDomain],

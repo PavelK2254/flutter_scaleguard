@@ -81,7 +81,9 @@ void main() {
       expect(agg.penaltyByCategory['Configuration / Release Risk'], 0.0);
     });
 
-    test('penaltyByCategory has all four canonical keys, correct values, deterministic order', () {
+    test(
+        'penaltyByCategory has all four canonical keys, correct values, deterministic order',
+        () {
       final results = [
         RuleResult(ruleId: 'god_files', penalty: 5, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),

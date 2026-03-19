@@ -98,12 +98,12 @@ void main() {
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
       expect(
-        lines.any((l) => l.startsWith('Hotspot (source): lib/features/achievements')),
+        lines.any(
+            (l) => l.startsWith('Hotspot (source): lib/features/achievements')),
         isTrue,
         reason: 'Top source should be achievements (4 findings)',
       );
-      final examplesStart =
-          lines.indexWhere((l) => l == 'Examples:');
+      final examplesStart = lines.indexWhere((l) => l == 'Examples:');
       expect(examplesStart, greaterThanOrEqualTo(0));
       final exampleLines = lines
           .skip(examplesStart + 1)
@@ -126,7 +126,8 @@ void main() {
       );
     });
 
-    test('when top hotspot has only 2 findings and N=3, only 2 examples from that hotspot are shown',
+    test(
+        'when top hotspot has only 2 findings and N=3, only 2 examples from that hotspot are shown',
         () {
       // Top source: achievements with 2 findings (2 files).
       // habit_details has 2 findings (2 files). We should show only the 2 achievements examples,
@@ -201,11 +202,11 @@ void main() {
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
       expect(
-        lines.any((l) => l.startsWith('Hotspot (source): lib/features/achievements')),
+        lines.any(
+            (l) => l.startsWith('Hotspot (source): lib/features/achievements')),
         isTrue,
       );
-      final examplesStart =
-          lines.indexWhere((l) => l == 'Examples:');
+      final examplesStart = lines.indexWhere((l) => l == 'Examples:');
       expect(examplesStart, greaterThanOrEqualTo(0));
       final exampleLines = lines
           .skip(examplesStart + 1)
@@ -260,11 +261,12 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
       final fullOutput = lines.join('\n');
-      expect(fullOutput, contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk]));
-      expect(fullOutput, isNot(contains(meta.categoryToSummary[meta.categoryCouplingRisk])));
-      expect(fullOutput, contains(meta.categoryToWhySoft[meta.categoryCouplingRisk]));
-      expect(fullOutput, isNot(contains(meta.categoryToWhyStandard[meta.categoryCouplingRisk])));
-      final dominantLine = lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
+      expect(fullOutput,
+          contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk]));
+      expect(fullOutput,
+          isNot(contains(meta.categoryToSummary[meta.categoryCouplingRisk])));
+      final dominantLine =
+          lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
       expect(dominantLine, contains(', low intensity)'));
     });
 
@@ -298,11 +300,14 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
       final fullOutput = lines.join('\n');
-      expect(fullOutput, contains(meta.categoryToSummary[meta.categoryCouplingRisk]));
-      expect(fullOutput, isNot(contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk])));
-      expect(fullOutput, contains(meta.categoryToWhyStandard[meta.categoryCouplingRisk]));
-      expect(fullOutput, isNot(contains(meta.categoryToWhySoft[meta.categoryCouplingRisk])));
-      final dominantLine = lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
+      expect(fullOutput,
+          contains(meta.categoryToSummary[meta.categoryCouplingRisk]));
+      expect(
+          fullOutput,
+          isNot(
+              contains(meta.categoryToSummarySoft[meta.categoryCouplingRisk])));
+      final dominantLine =
+          lines.where((l) => l.startsWith('Dominant Risk Category:')).single;
       expect(dominantLine, isNot(contains('low intensity')));
     });
   });
@@ -336,7 +341,8 @@ void main() {
       final moduleIndex = {
         'lib/feature/add_card/domain/use_case.dart': 'lib/feature/add_card',
         'lib/feature/buy_gift_card/data/repo.dart': 'lib/feature/buy_gift_card',
-        'lib/feature/card_management/ui/page.dart': 'lib/feature/card_management',
+        'lib/feature/card_management/ui/page.dart':
+            'lib/feature/card_management',
       };
       final results = [
         RuleResult(
@@ -362,29 +368,29 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
 
-      final topHotspotsStart = lines.indexWhere((l) => l == 'Top Hotspots:');
-      expect(topHotspotsStart, greaterThanOrEqualTo(0));
-      final topHotspotsBlock = lines
-          .skip(topHotspotsStart + 2)
-          .takeWhile((l) => l.isNotEmpty)
-          .toList();
+      final hotspotsStart = lines.indexWhere((l) => l == 'Hotspots:');
+      expect(hotspotsStart, greaterThanOrEqualTo(0));
+      final hotspotsBlock =
+          lines.skip(hotspotsStart + 2).takeWhile((l) => l != '---').toList();
 
       // Must show module-level roots, not a single coarse lib/feature.
       expect(
-        topHotspotsBlock.any((l) => l.startsWith('lib/feature/add_card (')),
+        hotspotsBlock.any((l) => l.startsWith('lib/feature/add_card (')),
         isTrue,
       );
       expect(
-        topHotspotsBlock.any((l) => l.startsWith('lib/feature/buy_gift_card (')),
+        hotspotsBlock.any((l) => l.startsWith('lib/feature/buy_gift_card (')),
         isTrue,
       );
       expect(
-        topHotspotsBlock.any((l) => l.startsWith('lib/feature/card_management (')),
+        hotspotsBlock.any((l) => l.startsWith('lib/feature/card_management (')),
         isTrue,
       );
       // Must NOT collapse to a single "lib/feature (" line.
-      final coarseLine = topHotspotsBlock.where((l) => l.startsWith('lib/feature (') && !l.startsWith('lib/feature/'));
-      expect(coarseLine.length, 0, reason: 'Hotspots must be module-level, not coarse lib/feature');
+      final coarseLine = hotspotsBlock.where((l) =>
+          l.startsWith('lib/feature (') && !l.startsWith('lib/feature/'));
+      expect(coarseLine.length, 0,
+          reason: 'Hotspots must be module-level, not coarse lib/feature');
     });
   });
 
@@ -417,10 +423,12 @@ void main() {
         ),
       ];
       final moduleIndex = {
-        'lib/feature/main_flow/presentation/page_a.dart': 'lib/feature/main_flow',
+        'lib/feature/main_flow/presentation/page_a.dart':
+            'lib/feature/main_flow',
         'lib/feature/main_flow/domain/use_case_b.dart': 'lib/feature/main_flow',
         'lib/feature/main_flow/data/repo_d.dart': 'lib/feature/main_flow',
-        'lib/feature/secondary_flow/presentation/page_c.dart': 'lib/feature/secondary_flow',
+        'lib/feature/secondary_flow/presentation/page_c.dart':
+            'lib/feature/secondary_flow',
       };
       final results = [
         RuleResult(
@@ -456,7 +464,8 @@ void main() {
         isTrue,
       );
       expect(
-        lines.any((l) => l.startsWith('Hotspot (source): lib/feature/main_flow')),
+        lines.any(
+            (l) => l.startsWith('Hotspot (source): lib/feature/main_flow')),
         isTrue,
       );
       // No target hotspot printed for layer_violations.
@@ -465,8 +474,7 @@ void main() {
         isFalse,
       );
 
-      final examplesStart =
-          lines.indexWhere((l) => l == 'Examples:');
+      final examplesStart = lines.indexWhere((l) => l == 'Examples:');
       expect(examplesStart, greaterThanOrEqualTo(0));
       final exampleLines = lines
           .skip(examplesStart + 1)
@@ -486,7 +494,8 @@ void main() {
   });
 
   group('Penalty by Category', () {
-    test('default output does not contain Penalty by Category or Debug Details', () {
+    test('default output does not contain Penalty by Category or Debug Details',
+        () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
@@ -511,7 +520,9 @@ void main() {
       expect(lines.any((l) => l == 'Hotspot Metrics'), isFalse);
     });
 
-    test('with showDebug prints penalty block under Debug Details with two decimals and deterministic order when totalPenalty > 0', () {
+    test(
+        'with showDebug prints penalty block under Debug Details with two decimals and deterministic order when totalPenalty > 0',
+        () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
@@ -535,7 +546,8 @@ void main() {
       expect(lines.any((l) => l == 'Coupling Risk: -10.00'), isTrue);
       expect(lines.any((l) => l == 'Structural Risk: -1.00'), isTrue);
       expect(lines.any((l) => l == 'Maintainability Risk: -0.00'), isTrue);
-      expect(lines.any((l) => l == 'Configuration / Release Risk: -0.00'), isTrue);
+      expect(
+          lines.any((l) => l == 'Configuration / Release Risk: -0.00'), isTrue);
       expect(lines.any((l) => l == 'Total Penalty: -11.00'), isTrue);
       final debugStart = lines.indexWhere((l) => l == 'Debug Details');
       final blockStart = lines.indexWhere((l) => l == 'Penalty by Category');
@@ -576,7 +588,8 @@ void main() {
   });
 
   group('Cap-hit note (default output)', () {
-    test('with capHits shows single-line Note after Most Expensive Risk block', () {
+    test('with capHits shows single-line Note after Most Expensive Risk block',
+        () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
@@ -607,7 +620,9 @@ void main() {
       expect(lines.any((l) => l.contains('these rules')), isFalse);
     });
 
-    test('with multiple capHits shows plural Note, rule IDs sorted alphabetically', () {
+    test(
+        'with multiple capHits shows plural Note, rule IDs sorted alphabetically',
+        () {
       final results = [
         RuleResult(ruleId: 'layer_violations', penalty: 10, findings: []),
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
@@ -633,8 +648,7 @@ void main() {
             l.contains('these rules')),
         isTrue,
       );
-      final noteLine =
-          lines.where((l) => l.startsWith('Note:')).single;
+      final noteLine = lines.where((l) => l.startsWith('Note:')).single;
       expect(noteLine, contains('cross_feature_coupling'));
       expect(noteLine, contains('layer_violations'));
       expect(noteLine.indexOf('cross_feature_coupling'),
@@ -662,8 +676,7 @@ void main() {
       );
       final lines = _capturePrint(() => ConsoleRenderer.render(report));
       expect(
-        lines.any((l) =>
-            l.startsWith('Note:') && l.contains('penalty cap')),
+        lines.any((l) => l.startsWith('Note:') && l.contains('penalty cap')),
         isFalse,
       );
     });
@@ -688,8 +701,7 @@ void main() {
       final lines = _capturePrint(() =>
           ConsoleRenderer.render(report, showStats: false, showDebug: true));
       expect(
-        lines.any((l) =>
-            l.startsWith('Note:') && l.contains('penalty cap')),
+        lines.any((l) => l.startsWith('Note:') && l.contains('penalty cap')),
         isFalse,
         reason: 'Cap-hit note is default-only, not in --debug',
       );
@@ -713,12 +725,16 @@ void main() {
       final scanPathIdx = lines.indexWhere((l) => l.startsWith('Scan Path:'));
       expect(projectIdx, greaterThanOrEqualTo(0));
       expect(scanPathIdx, greaterThanOrEqualTo(0));
-      expect(scanPathIdx, equals(projectIdx + 1), reason: 'Scan Path must follow Project');
+      expect(scanPathIdx, equals(projectIdx + 1),
+          reason: 'Scan Path must follow Project');
       expect(lines[projectIdx], equals('Project: my_project'));
-      expect(lines[scanPathIdx], equals('Scan Path: /resolved/abs/path/my_project'));
+      expect(lines[scanPathIdx],
+          equals('Scan Path: /resolved/abs/path/my_project'));
     });
 
-    test('default output snapshot: required sections present in order, no debug blocks', () {
+    test(
+        'default output snapshot: required sections present in order, no debug blocks',
+        () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 5, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 0, findings: []),
@@ -743,18 +759,19 @@ void main() {
       expect(full, contains('Scan Path: project'));
       expect(full, contains('Architecture Score: 95/100'));
       expect(full, contains('Findings by Category:'));
-      expect(full, contains('Top Hotspots:'));
-      expect(full, contains('Why This Matters:'));
+      expect(full, contains('Tip:'));
+      expect(
+          full, contains('Use ScaleGuard in CI to prevent architecture drift'));
       expect(full, isNot(contains('Debug Details')));
       expect(full, isNot(contains('Penalty by Category')));
       expect(full, isNot(contains('Scan Stats')));
       expect(full, isNot(contains('reached its penalty cap')),
           reason: 'No cap-hit note when capHits empty/absent');
+      // With no findings, Top Fix Priorities and Hotspots are omitted; order: Findings by Category then CI Tip.
       final findingsIdx = lines.indexOf('Findings by Category:');
-      final topHotspotsIdx = lines.indexOf('Top Hotspots:');
-      final whyIdx = lines.indexOf('Why This Matters:');
-      expect(findingsIdx, lessThan(topHotspotsIdx));
-      expect(topHotspotsIdx, lessThan(whyIdx));
+      final tipIdx = lines.indexOf('Tip:');
+      expect(findingsIdx, greaterThanOrEqualTo(0));
+      expect(tipIdx, greaterThan(findingsIdx));
       expect(lines.where((l) => l == '---').length, greaterThanOrEqualTo(2),
           reason: 'Section separators must be exactly ---');
     });
@@ -792,7 +809,9 @@ void main() {
       expect(lines.any((l) => l == 'Debug Details'), isFalse);
     });
 
-    test('--debug only: includes Debug Details with Penalty by Rule when present', () {
+    test(
+        '--debug only: includes Debug Details with Penalty by Rule when present',
+        () {
       final results = [
         RuleResult(ruleId: 'cross_feature_coupling', penalty: 10, findings: []),
         RuleResult(ruleId: 'layer_violations', penalty: 1, findings: []),
