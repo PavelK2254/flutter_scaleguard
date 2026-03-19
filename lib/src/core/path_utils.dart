@@ -10,7 +10,9 @@
 String normalizePath(String path) {
   if (path.isEmpty) return '';
   final withSlashes = path.replaceAll('\\', '/');
-  final leadingSlash = withSlashes.startsWith('//') ? '//' : (withSlashes.startsWith('/') ? '/' : '');
+  final leadingSlash = withSlashes.startsWith('//')
+      ? '//'
+      : (withSlashes.startsWith('/') ? '/' : '');
   final parts = withSlashes.split('/');
   final resolved = <String>[];
   for (final p in parts) {
@@ -21,7 +23,9 @@ String normalizePath(String path) {
     }
   }
   final joined = resolved.join('/');
-  return leadingSlash.isEmpty ? joined : (joined.isEmpty ? leadingSlash : '$leadingSlash$joined');
+  return leadingSlash.isEmpty
+      ? joined
+      : (joined.isEmpty ? leadingSlash : '$leadingSlash$joined');
 }
 
 /// Returns [relativePath] as an absolute path under [projectRoot].

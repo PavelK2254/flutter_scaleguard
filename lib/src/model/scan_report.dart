@@ -25,20 +25,26 @@ class ScanReport {
   final int score;
   final RiskLevel riskLevel;
   final List<RuleResult> ruleResults;
+
   /// Deduplicated findings (by fingerprint), deterministically sorted.
   final List<Finding> uniqueFindings;
   final DateTime timestamp;
   final String? projectPath;
+
   /// Friendly display name for console (e.g. basename when user scans ".").
   final String? projectDisplayName;
+
   /// Resolved absolute path of the scan target for header display.
   final String? scanPath;
   final CategoryAggregation? aggregation;
   final ScanMeta? meta;
+
   /// Map from normalized file path to module root key (e.g. lib/feature/add_card). Built during scan.
   final Map<String, String>? moduleIndex;
+
   /// Rule ids that hit their penalty cap. Sorted ascending. Populated during scan for debug output.
   final List<String>? capHits;
+
   /// Hotspot concentration metrics. Populated during scan for debug output.
   final HotspotMetrics? hotspotMetrics;
 

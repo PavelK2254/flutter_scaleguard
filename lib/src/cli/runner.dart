@@ -29,7 +29,8 @@ Future<int> runCli(List<String> arguments) async {
     }
     final value = int.tryParse(arguments[valueIdx]);
     if (value == null || value < 0 || value > 100) {
-      stderr.writeln('Error: --fail-under must be an integer between 0 and 100.');
+      stderr
+          .writeln('Error: --fail-under must be an integer between 0 and 100.');
       return 64;
     }
     failUnder = value;
@@ -38,7 +39,11 @@ Future<int> runCli(List<String> arguments) async {
   final args = <String>[];
   for (var i = 0; i < arguments.length; i++) {
     final a = arguments[i];
-    if (a == '--json' || a == '--stats' || a == '--debug' || a == '--help' || a == '-h') continue;
+    if (a == '--json' ||
+        a == '--stats' ||
+        a == '--debug' ||
+        a == '--help' ||
+        a == '-h') continue;
     if (a == '--fail-under') {
       i++;
       continue;
@@ -46,7 +51,8 @@ Future<int> runCli(List<String> arguments) async {
     args.add(a);
   }
   if (args.length < 2 || args[0] != 'scan') {
-    print('Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
+    print(
+        'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
     print('Use --help for exit codes and options.');
     return 64;
   }
@@ -66,13 +72,16 @@ bool _isCurrentDirPath(String rawPath) {
 }
 
 /// Resolved path for scanning, display name for "Project:", and scan path for "Scan Path:".
-(String resolvedPath, String displayName, String scanPath) _resolvePath(String rawPath) {
+(String resolvedPath, String displayName, String scanPath) _resolvePath(
+    String rawPath) {
   final dir = Directory(rawPath);
-  final resolvedPath = _isCurrentDirPath(rawPath)
-      ? Directory.current.path
-      : dir.absolute.path;
+  final resolvedPath =
+      _isCurrentDirPath(rawPath) ? Directory.current.path : dir.absolute.path;
   final displayName = _isCurrentDirPath(rawPath)
-      ? (path_utils.normalizePath(resolvedPath).split('/').lastWhere((s) => s.isNotEmpty, orElse: () => 'project'))
+      ? (path_utils
+          .normalizePath(resolvedPath)
+          .split('/')
+          .lastWhere((s) => s.isNotEmpty, orElse: () => 'project'))
       : rawPath;
   return (resolvedPath, displayName, path_utils.normalizePath(resolvedPath));
 }
@@ -85,13 +94,13 @@ Future<int> _runScan(String rawPath,
   final dir = Directory(rawPath);
   if (!await dir.exists() ||
       !await dir.stat().then((s) => s.type == FileSystemEntityType.directory)) {
-    stderr.writeln('Error: project path not found or not a directory: $rawPath');
+    stderr
+        .writeln('Error: project path not found or not a directory: $rawPath');
     return 64;
   }
   final (resolvedPath, displayName, scanPath) = _resolvePath(rawPath);
   final report = await runScan(resolvedPath,
-      projectDisplayName: displayName,
-      scanPath: scanPath);
+      projectDisplayName: displayName, scanPath: scanPath);
   if (jsonOutput) {
     final version = await getPackageVersion();
     print(JsonRenderer.render(report, version: version));
@@ -118,7 +127,8 @@ Future<int> _runScan(String rawPath,
 }
 
 void _printHelp() {
-  print('Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
+  print(
+      'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
   print('');
   print('Exit codes:');
   print('  0  Scan succeeded (and passed --fail-under if provided)');

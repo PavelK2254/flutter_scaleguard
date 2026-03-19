@@ -33,13 +33,12 @@ class ScanMeta {
           importsUnresolved == other.importsUnresolved;
 
   @override
-  int get hashCode =>
-      Object.hash(
-          schemaVersion,
-          scannedFiles,
-          ignoredFiles,
-          importsTotal,
-          importsResolvedToProject,
-          importsExternalPackage,
-          importsUnresolved);
+  int get hashCode => Object.hash(
+      schemaVersion,
+      scannedFiles,
+      ignoredFiles,
+      importsTotal,
+      importsResolvedToProject,
+      importsExternalPackage,
+      importsUnresolved);
 }

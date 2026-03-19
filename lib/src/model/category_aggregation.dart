@@ -119,8 +119,9 @@ class CategoryAggregation {
 
     // No penalty => no risk signal: avoid surfacing a fake dominant/expensive.
     final hasRisk = totalPenalty > 0;
-    final dominantCategory =
-        hasRisk && categoryScores.isNotEmpty ? categoryScores.first.category : '';
+    final dominantCategory = hasRisk && categoryScores.isNotEmpty
+        ? categoryScores.first.category
+        : '';
     final sortedByRule = List<RuleResult>.from(results)
       ..sort((a, b) {
         final byPenalty = b.penalty.compareTo(a.penalty);

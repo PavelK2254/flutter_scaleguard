@@ -11,7 +11,8 @@ void main() {
 
     test('.g.dart and .freezed.dart are ignored', () {
       expect(config.shouldIgnore('lib/features/auth/user.g.dart'), isTrue);
-      expect(config.shouldIgnore('lib/features/auth/user.freezed.dart'), isTrue);
+      expect(
+          config.shouldIgnore('lib/features/auth/user.freezed.dart'), isTrue);
     });
 
     test('build/ is ignored', () {

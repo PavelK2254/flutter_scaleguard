@@ -26,7 +26,8 @@ class ConsoleRenderer {
     final v = version ?? fallbackPackageVersion;
     final versionLabel = v.startsWith('v') ? v : 'v$v';
     print('Flutter ScaleGuard $versionLabel');
-    print('Project: ${report.projectDisplayName ?? report.projectPath ?? '<unknown>'}');
+    print(
+        'Project: ${report.projectDisplayName ?? report.projectPath ?? '<unknown>'}');
     print('Scan Path: ${report.scanPath ?? report.projectPath ?? '<unknown>'}');
     print('');
     print('Architecture Score: ${report.score}/100');
@@ -38,8 +39,8 @@ class ConsoleRenderer {
       final useSoft = report.score >= 90 ||
           (agg.totalPenalty <= _softPenaltyThreshold && agg.totalPenalty > 0);
       final summaries = useSoft ? categoryToSummarySoft : categoryToSummary;
-      final summary = summaries[agg.dominantCategory] ??
-          'No dominant risk category.';
+      final summary =
+          summaries[agg.dominantCategory] ?? 'No dominant risk category.';
       print('Summary:');
       print(summary);
       print('');
@@ -50,9 +51,10 @@ class ConsoleRenderer {
                   .round()
               : 0)
           : 0;
-      final dominantSuffix = agg.totalPenalty > 0 && agg.totalPenalty <= _softPenaltyThreshold
-          ? ' ($pct% of total penalty, low intensity)'
-          : ' ($pct% of total penalty)';
+      final dominantSuffix =
+          agg.totalPenalty > 0 && agg.totalPenalty <= _softPenaltyThreshold
+              ? ' ($pct% of total penalty, low intensity)'
+              : ' ($pct% of total penalty)';
       if (agg.dominantCategory.isNotEmpty || agg.totalPenalty > 0) {
         print('Dominant Risk Category: ${agg.dominantCategory}$dominantSuffix');
       }
@@ -63,9 +65,8 @@ class ConsoleRenderer {
       print(
           'Most Expensive Risk: $displayName (-${agg.mostExpensivePenalty}) [$mostExpCategory] [rule: ${agg.mostExpensiveRuleId}]');
       final ruleId = agg.mostExpensiveRuleId;
-      final forRule = report.uniqueFindings
-          .where((f) => f.ruleId == ruleId)
-          .toList();
+      final forRule =
+          report.uniqueFindings.where((f) => f.ruleId == ruleId).toList();
       (String, int)? sourceTop;
       (String, int)? targetTop;
       if (forRule.isNotEmpty) {
@@ -84,16 +85,16 @@ class ConsoleRenderer {
           }
         }
         sourceTop = _topHotspotEntry(sourceCountByKey);
-        targetTop = hasTargetHotspot && targetCountByKey != null && targetCountByKey.isNotEmpty
+        targetTop = hasTargetHotspot &&
+                targetCountByKey != null &&
+                targetCountByKey.isNotEmpty
             ? _topHotspotEntry(targetCountByKey)
             : null;
       }
       _printMostExpensiveHotspot(report, ruleId, sourceTop, targetTop);
-      _printMostExpensiveExamples(
-          report, ruleId, topSourceHotspotKey: sourceTop?.$1);
-      if (!showDebug &&
-          report.capHits != null &&
-          report.capHits!.isNotEmpty) {
+      _printMostExpensiveExamples(report, ruleId,
+          topSourceHotspotKey: sourceTop?.$1);
+      if (!showDebug && report.capHits != null && report.capHits!.isNotEmpty) {
         _printCapHitNote(report.capHits!);
       }
       print('');
@@ -140,8 +141,7 @@ class ConsoleRenderer {
     final m = report.meta!;
     print('');
     print('Scan Stats');
-    print(
-        'Files scanned: ${m.scannedFiles} (${m.ignoredFiles} ignored)');
+    print('Files scanned: ${m.scannedFiles} (${m.ignoredFiles} ignored)');
     print(
         'Imports: ${m.importsResolvedToProject}/${m.importsTotal} resolved | ${m.importsExternalPackage} external | ${m.importsUnresolved} unresolved');
   }
@@ -151,10 +151,8 @@ class ConsoleRenderer {
     final agg = report.aggregation;
     final hasPenaltyByCategory =
         agg != null && agg.totalPenalty > 0 && agg.penaltyByCategory.isNotEmpty;
-    final hasPenaltyByRule =
-        agg != null && agg.penaltyByRule.isNotEmpty;
-    final hasCapHits =
-        report.capHits != null && report.capHits!.isNotEmpty;
+    final hasPenaltyByRule = agg != null && agg.penaltyByRule.isNotEmpty;
+    final hasCapHits = report.capHits != null && report.capHits!.isNotEmpty;
     final hasHotspotMetrics = report.hotspotMetrics != null;
 
     if (!hasPenaltyByCategory &&
@@ -268,9 +266,8 @@ class ConsoleRenderer {
     String ruleId, {
     String? topSourceHotspotKey,
   }) {
-    final forRule = report.uniqueFindings
-        .where((f) => f.ruleId == ruleId)
-        .toList();
+    final forRule =
+        report.uniqueFindings.where((f) => f.ruleId == ruleId).toList();
     if (forRule.isEmpty) return;
     // Deterministic ordering within a rule: severity desc, file asc, line asc, resolvedImportedPath asc.
     forRule.sort((a, b) {
@@ -327,9 +324,11 @@ class ConsoleRenderer {
         if (f.targetFeaturePath != null &&
             f.resolvedImportedPath != null &&
             f.resolvedImportedPath!.startsWith(f.targetFeaturePath!)) {
-          final tail = f.resolvedImportedPath!.length > f.targetFeaturePath!.length + 1
-              ? f.resolvedImportedPath!.substring(f.targetFeaturePath!.length + 1)
-              : '';
+          final tail =
+              f.resolvedImportedPath!.length > f.targetFeaturePath!.length + 1
+                  ? f.resolvedImportedPath!
+                      .substring(f.targetFeaturePath!.length + 1)
+                  : '';
           final tailMax = _maxPathLength - f.targetFeaturePath!.length - 2;
           pathStr = tailMax > 0
               ? '${f.targetFeaturePath}/${_truncateMiddle(tail, tailMax)}'
@@ -377,9 +376,8 @@ class ConsoleRenderer {
       ruleResultsInCategory.sort((a, b) => a.ruleId.compareTo(b.ruleId));
       print(cs.category);
       for (final r in ruleResultsInCategory) {
-        final forRule = report.uniqueFindings
-            .where((f) => f.ruleId == r.ruleId)
-            .toList();
+        final forRule =
+            report.uniqueFindings.where((f) => f.ruleId == r.ruleId).toList();
         final uniqueCount = forRule.length;
         final fileCount = forRule.map((f) => f.file).toSet().length;
         final label = ruleIdToDisplayLabel[r.ruleId] ?? r.ruleId;
@@ -401,8 +399,7 @@ class ConsoleRenderer {
     print('---');
     print('');
     print('Tip:');
-    print(
-        'Use ScaleGuard in CI to prevent architecture drift:');
+    print('Use ScaleGuard in CI to prevent architecture drift:');
     print('scale_guard scan . --fail-under 70');
   }
 
@@ -442,7 +439,8 @@ class ConsoleRenderer {
     for (final f in report.uniqueFindings) {
       final key = HotspotUtils.getSourceHotspotKey(f, report);
       ruleCountByKey[key] ??= {};
-      ruleCountByKey[key]![f.ruleId] = (ruleCountByKey[key]![f.ruleId] ?? 0) + 1;
+      ruleCountByKey[key]![f.ruleId] =
+          (ruleCountByKey[key]![f.ruleId] ?? 0) + 1;
     }
     return ruleCountByKey;
   }
@@ -463,7 +461,8 @@ class ConsoleRenderer {
   static String? _shortHint(String suggestion) {
     final t = suggestion.trim();
     if (t.isEmpty) return null;
-    final firstLine = t.contains('\n') ? t.substring(0, t.indexOf('\n')).trim() : t;
+    final firstLine =
+        t.contains('\n') ? t.substring(0, t.indexOf('\n')).trim() : t;
     final firstSentence = firstLine.contains('.')
         ? firstLine.substring(0, firstLine.indexOf('.') + 1).trim()
         : firstLine;

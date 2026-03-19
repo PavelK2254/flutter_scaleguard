@@ -54,8 +54,8 @@ Map<Layer, List<String>> _segmentsByLayer(ScannerConfig config) {
   return map;
 }
 
-Layer _classifyPathWithSegments(
-    String norm, ScannerConfig config, Map<Layer, List<String>>? segmentsByLayer) {
+Layer _classifyPathWithSegments(String norm, ScannerConfig config,
+    Map<Layer, List<String>>? segmentsByLayer) {
   if (config.layerMappings.isNotEmpty) {
     final byLayer = segmentsByLayer ?? _segmentsByLayer(config);
     for (final layer in _layerPriority) {
@@ -77,7 +77,8 @@ Layer _classifyPathWithSegments(
 /// Classifies [path] to a layer using [config].layerMappings if available, else default path patterns.
 /// Enforces priority: presentation > domain > data. When using layerMappings, longest matching segment wins per layer.
 Layer classifyPath(String path, ScannerConfig config) {
-  return _classifyPathWithSegments(path_utils.normalizePath(path), config, null);
+  return _classifyPathWithSegments(
+      path_utils.normalizePath(path), config, null);
 }
 
 /// Detects invalid imports between presentation, domain, data.
@@ -104,7 +105,8 @@ class LayerViolationsRule implements Rule {
     for (final file in index.files) {
       final fromPath = ProjectIndex.normalizePath(file.path);
       final fromNorm = path_utils.normalizePath(fromPath);
-      final fromLayer = _classifyPathWithSegments(fromNorm, config, segmentsByLayer);
+      final fromLayer =
+          _classifyPathWithSegments(fromNorm, config, segmentsByLayer);
       if (fromLayer == Layer.unknown) continue;
       final rawAllowed = config.allowedLayerDependencies[fromLayer.name];
       if (rawAllowed == null) continue;
@@ -115,14 +117,15 @@ class LayerViolationsRule implements Rule {
       for (final importTarget in file.imports) {
         final toPath = ProjectIndex.normalizePath(importTarget);
         final toNorm = path_utils.normalizePath(toPath);
-        final toLayer = _classifyPathWithSegments(toNorm, config, segmentsByLayer);
+        final toLayer =
+            _classifyPathWithSegments(toNorm, config, segmentsByLayer);
         if (toLayer == Layer.unknown) continue;
         if (fromLayer == toLayer) continue;
         if (!allowed.contains(toLayer.name)) {
-          final severity = (fromLayer == Layer.presentation &&
-                  toLayer == Layer.data)
-              ? FindingSeverity.high
-              : FindingSeverity.medium;
+          final severity =
+              (fromLayer == Layer.presentation && toLayer == Layer.data)
+                  ? FindingSeverity.high
+                  : FindingSeverity.medium;
           final message =
               'Layer boundary crossed: ${fromLayer.name} imports ${toLayer.name} (may increase coupling and future refactor cost).';
           final evidenceSnippet = "import '$importTarget';";

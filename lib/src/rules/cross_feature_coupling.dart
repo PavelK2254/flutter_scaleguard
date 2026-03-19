@@ -27,7 +27,8 @@ class CrossFeatureCouplingRule implements Rule {
   @override
   RuleResult run(ProjectIndex index, ScannerConfig config) {
     final findings = <Finding>[];
-    final featureRoots = config.featureRoots.map((r) => path_utils.normalizePath(r)).toList();
+    final featureRoots =
+        config.featureRoots.map((r) => path_utils.normalizePath(r)).toList();
     final pathToFeature = <String, String>{};
     for (final f in index.files) {
       final path = ProjectIndex.normalizePath(f.path);

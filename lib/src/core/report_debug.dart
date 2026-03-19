@@ -19,7 +19,8 @@ class ReportDebug {
       final cap = ruleIdToCap[r.ruleId];
       if (weight == null || cap == null) continue;
       final rawPenalty = (r.riskValue ?? 0) * weight;
-      if (rawPenalty > cap && r.penalty >= cap - _capEpsilon) hitIds.add(r.ruleId);
+      if (rawPenalty > cap && r.penalty >= cap - _capEpsilon)
+        hitIds.add(r.ruleId);
     }
     hitIds.sort((a, b) => a.compareTo(b));
     return hitIds;
@@ -41,8 +42,8 @@ class ReportDebug {
     final top3Sum = ordered.take(3).fold<int>(0, (s, e) => s + e.count);
     return HotspotMetrics(
       totalFindings: totalFindings,
-      concentration: _round4(
-          ordered.isEmpty ? 0.0 : ordered.first.count / totalFindings),
+      concentration:
+          _round4(ordered.isEmpty ? 0.0 : ordered.first.count / totalFindings),
       top3Share: _round4(top3Sum / totalFindings),
       largestHotspot: ordered.isEmpty
           ? null

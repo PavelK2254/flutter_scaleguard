@@ -44,7 +44,8 @@ void main() {
       expect(result.findings.first.message, contains('presentation'));
       expect(result.findings.first.message, contains('imports'));
       expect(result.findings.first.message, contains('data'));
-      expect(result.findings.first.message, contains("import 'lib/features/auth/data/repository.dart';"));
+      expect(result.findings.first.message,
+          contains("import 'lib/features/auth/data/repository.dart';"));
       expect(result.penalty, greaterThan(0));
     });
 
@@ -80,7 +81,8 @@ void main() {
       expect(result.findings.first.message, contains('data'));
     });
 
-    test('no finding when domain imports data and allowDomainToData is true', () {
+    test('no finding when domain imports data and allowDomainToData is true',
+        () {
       final configWithAllow = ScannerConfig(allowDomainToData: true);
       final index = ProjectIndex(
         files: [
@@ -96,7 +98,9 @@ void main() {
       expect(result.findings, isEmpty);
     });
 
-    test('two different layer violations in same file yield two findings with distinct fingerprints', () {
+    test(
+        'two different layer violations in same file yield two findings with distinct fingerprints',
+        () {
       final index = ProjectIndex(
         files: [
           IndexedFile(

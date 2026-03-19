@@ -61,7 +61,8 @@ void main() {
       expect(json, contains('"resolvedToProject"'));
     });
 
-    test('CLI invalid project path returns 64 and writes error to stderr', () async {
+    test('CLI invalid project path returns 64 and writes error to stderr',
+        () async {
       const badPath = '/nonexistent/path/12345';
       final result = await runCli(['scan', badPath]);
       expect(result, 64);
@@ -72,7 +73,8 @@ void main() {
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 64);
-      expect(_stderrString(processResult.stderr), contains('project path not found'));
+      expect(_stderrString(processResult.stderr),
+          contains('project path not found'));
     });
 
     test('CLI --help prints usage and exit codes, exits 0', () async {
@@ -118,7 +120,9 @@ void main() {
       expect(_stdoutString(result.stdout), contains('Debug Details'));
     });
 
-    test('CLI with --stats --debug prints Scan Stats then Debug Details in order', () async {
+    test(
+        'CLI with --stats --debug prints Scan Stats then Debug Details in order',
+        () async {
       final dir = Directory.current.path;
       final result = await Process.run(
         'dart',
@@ -141,7 +145,9 @@ void main() {
       expect(result, isIn([0, 1]), reason: 'Without --fail-under, exit 0 or 1');
     });
 
-    test('--fail-under set and score below threshold: exit 2, separator then Exit line (console)', () async {
+    test(
+        '--fail-under set and score below threshold: exit 2, separator then Exit line (console)',
+        () async {
       final report = await runScan(Directory.current.path);
       final threshold = report.score + 1;
       if (threshold > 100) return;
@@ -154,22 +160,35 @@ void main() {
       expect(result, 2);
       final resultWithOutput = await Process.run(
         'dart',
-        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path, '--fail-under', '$threshold'],
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          Directory.current.path,
+          '--fail-under',
+          '$threshold'
+        ],
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
       expect(resultWithOutput.exitCode, 2);
       final stdout = _stdoutString(resultWithOutput.stdout);
       expect(stdout, contains('---'));
-      expect(stdout, contains('Exit: score ${report.score} is below fail-under threshold $threshold.'));
+      expect(
+          stdout,
+          contains(
+              'Exit: score ${report.score} is below fail-under threshold $threshold.'));
       final exitLineIdx = stdout.indexOf('Exit: score');
       final sepIdx = stdout.lastIndexOf('---', exitLineIdx);
-      expect(sepIdx, greaterThanOrEqualTo(0), reason: 'Separator --- must appear before Exit line');
+      expect(sepIdx, greaterThanOrEqualTo(0),
+          reason: 'Separator --- must appear before Exit line');
       final between = stdout.substring(sepIdx, exitLineIdx);
-      expect(between, contains('\n\n'), reason: 'Blank line after separator before Exit line');
+      expect(between, contains('\n\n'),
+          reason: 'Blank line after separator before Exit line');
     });
 
-    test('--fail-under set and score meets threshold: exit 0 or 1 (not 2)', () async {
+    test('--fail-under set and score meets threshold: exit 0 or 1 (not 2)',
+        () async {
       final report = await runScan(Directory.current.path);
       final result = await runCli([
         'scan',
@@ -182,56 +201,98 @@ void main() {
     });
 
     test('--fail-under invalid: missing value exits 64', () async {
-      final result = await runCli(['scan', Directory.current.path, '--fail-under']);
+      final result =
+          await runCli(['scan', Directory.current.path, '--fail-under']);
       expect(result, 64);
       final processResult = await Process.run(
         'dart',
-        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path, '--fail-under'],
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          Directory.current.path,
+          '--fail-under'
+        ],
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 64);
-      expect(_stderrString(processResult.stderr), contains('--fail-under requires an integer value'));
+      expect(_stderrString(processResult.stderr),
+          contains('--fail-under requires an integer value'));
     });
 
     test('--fail-under invalid: out of range exits 64', () async {
-      final result = await runCli(['scan', Directory.current.path, '--fail-under', '101']);
+      final result =
+          await runCli(['scan', Directory.current.path, '--fail-under', '101']);
       expect(result, 64);
-      final result2 = await runCli(['scan', Directory.current.path, '--fail-under', '-1']);
+      final result2 =
+          await runCli(['scan', Directory.current.path, '--fail-under', '-1']);
       expect(result2, 64);
       final processResult = await Process.run(
         'dart',
-        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path, '--fail-under', '101'],
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          Directory.current.path,
+          '--fail-under',
+          '101'
+        ],
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 64);
-      expect(_stderrString(processResult.stderr), contains('between 0 and 100'));
+      expect(
+          _stderrString(processResult.stderr), contains('between 0 and 100'));
     });
 
-    test('--fail-under with --json when triggered: stdout valid JSON only, stderr has message, exit 2', () async {
+    test(
+        '--fail-under with --json when triggered: stdout valid JSON only, stderr has message, exit 2',
+        () async {
       final report = await runScan(Directory.current.path);
       final threshold = report.score + 1;
       if (threshold > 100) return;
       final processResult = await Process.run(
         'dart',
-        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path, '--json', '--fail-under', '$threshold'],
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          Directory.current.path,
+          '--json',
+          '--fail-under',
+          '$threshold'
+        ],
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
       expect(processResult.exitCode, 2);
-      expect(_stderrString(processResult.stderr), contains('Exit: score ${report.score} is below fail-under threshold $threshold.'));
+      expect(
+          _stderrString(processResult.stderr),
+          contains(
+              'Exit: score ${report.score} is below fail-under threshold $threshold.'));
       final out = _stdoutString(processResult.stdout);
       expect(out, startsWith('{'));
       expect(out, contains('"score"'));
-      expect(out, isNot(contains('Exit: score')), reason: 'Exit message must not appear on stdout in JSON mode');
+      expect(out, isNot(contains('Exit: score')),
+          reason: 'Exit message must not appear on stdout in JSON mode');
     });
 
-    test('--fail-under with --json when not triggered: stdout JSON only, exit 0', () async {
+    test(
+        '--fail-under with --json when not triggered: stdout JSON only, exit 0',
+        () async {
       await runScan(Directory.current.path);
       final processResult = await Process.run(
         'dart',
-        ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path, '--json', '--fail-under', '0'],
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          Directory.current.path,
+          '--json',
+          '--fail-under',
+          '0'
+        ],
         runInShell: true,
         workingDirectory: Directory.current.path,
       );
@@ -267,7 +328,8 @@ void main() {
       expect(list.last.severity, FindingSeverity.medium);
     });
 
-    test('scan . shows folder name as Project and absolute path as Scan Path', () async {
+    test('scan . shows folder name as Project and absolute path as Scan Path',
+        () async {
       final projectRoot = Directory.current.path;
       final result = await Process.run(
         'dart',
@@ -282,13 +344,16 @@ void main() {
       final expectedBasename = nonEmpty.isEmpty ? 'project' : nonEmpty.last;
       expect(out, contains('Project: $expectedBasename'));
       expect(out, isNot(contains('Project: .')));
-      final scanPathLines = out.split('\n').where((String l) => l.startsWith('Scan Path:'));
+      final scanPathLines =
+          out.split('\n').where((String l) => l.startsWith('Scan Path:'));
       expect(scanPathLines, isNotEmpty);
       final expectedPath = projectRoot.replaceAll(r'\', '/');
       expect(scanPathLines.first, contains(expectedPath));
     });
 
-    test('scan with explicit path shows path as Project and Scan Path as resolved absolute', () async {
+    test(
+        'scan with explicit path shows path as Project and Scan Path as resolved absolute',
+        () async {
       final result = await Process.run(
         'dart',
         ['run', 'bin/scale_guard.dart', 'scan', Directory.current.path],
@@ -302,7 +367,8 @@ void main() {
       expect(out, contains(expectedPath));
     });
 
-    test('Scan Path line is normalized and contains no . or .. segments', () async {
+    test('Scan Path line is normalized and contains no . or .. segments',
+        () async {
       final projectRoot = Directory.current.path;
       final result = await Process.run(
         'dart',
@@ -312,12 +378,17 @@ void main() {
       );
       expect(result.exitCode, isIn([0, 1]));
       final out = _stdoutString(result.stdout);
-      final scanPathLines = out.split('\n').where((String l) => l.startsWith('Scan Path:'));
+      final scanPathLines =
+          out.split('\n').where((String l) => l.startsWith('Scan Path:'));
       expect(scanPathLines, isNotEmpty);
       final scanPathLine = scanPathLines.first;
-      final scanPathValue = scanPathLine.substring(scanPathLine.indexOf('Scan Path:') + 'Scan Path:'.length).trim();
-      expect(scanPathValue, isNot(contains('..')), reason: 'Scan Path must not contain ..');
-      expect(scanPathValue, isNot(contains('/./')), reason: 'Scan Path must not contain /.');
+      final scanPathValue = scanPathLine
+          .substring(scanPathLine.indexOf('Scan Path:') + 'Scan Path:'.length)
+          .trim();
+      expect(scanPathValue, isNot(contains('..')),
+          reason: 'Scan Path must not contain ..');
+      expect(scanPathValue, isNot(contains('/./')),
+          reason: 'Scan Path must not contain /.');
       expect(scanPathValue, contains(projectRoot.replaceAll(r'\', '/')),
           reason: 'Scan Path should be absolute path to project root');
     });
