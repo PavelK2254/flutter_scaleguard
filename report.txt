@@ -1,0 +1,123 @@
+Flutter ScaleGuard v0.5.0
+Project: ../FlareHabit
+Scan Path: C:/Development/Flutter Projects/FlareHabit
+
+Architecture Score: 69/100
+Risk Level: Medium
+
+Summary:
+This codebase shows early-stage coupling patterns that may reduce feature isolation as the team scales.
+
+Dominant Risk Category: Coupling Risk (69% of total penalty)
+Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-15.0) [Coupling Risk] [rule: cross_feature_coupling]
+Hotspot (source): lib/features/habit_details (43 findings)
+Hotspot (target): lib/features/habits (76 findings)
+Examples:
+  lib/features/habit_details/presentation/cubit/habit_details_cubit.dart habit_details -> habits lib/features/habits/domain/entities/habit_entity.dart
+  lib/features/habit_details/presentation/cubit/habit_details_state.dart habit_details -> habits lib/features/habits/domain/entities/habit_entity.dart
+  lib/features/habit_details/presentation/cubit/motivation_notes_cubit.dart habit_details -> habits lib/features/habits/domain/models/motivation_note.dart
+  (+88 more)
+Note: cross_feature_coupling reached its penalty cap (score may understate severity for this rule).
+
+---
+
+Top Fix Priorities:
+
+1. lib/features/habit_details
+   - 61 findings
+   - dominant: cross_feature_coupling
+   - Avoid direct feature-to-feature imports.
+
+2. lib/features/habit_creation
+   - 46 findings
+   - dominant: cross_feature_coupling
+   - Avoid direct feature-to-feature imports.
+
+3. lib/features/habits
+   - 15 findings
+   - dominant: service_locator_abuse
+   - Limit service locator usage to composition roots.
+
+
+Hotspots:
+
+lib/features/habit_details (61 findings)
+  - cross_feature_coupling: 43
+  - service_locator_abuse: 13
+  - layer_violations: 4
+  - god_files: 1
+
+lib/features/habit_creation (46 findings)
+  - cross_feature_coupling: 27
+  - hardcoded_scale_risks: 7
+  - service_locator_abuse: 5
+  - god_files: 4
+  - layer_violations: 3
+
+lib/features/habits (15 findings)
+  - service_locator_abuse: 6
+  - god_files: 4
+  - cross_feature_coupling: 3
+  - hardcoded_scale_risks: 1
+  - layer_violations: 1
+
+lib/features/profile (9 findings)
+  - service_locator_abuse: 5
+  - cross_feature_coupling: 3
+  - layer_violations: 1
+
+lib/features/achievements (8 findings)
+  - cross_feature_coupling: 6
+  - service_locator_abuse: 2
+
+lib/features/home_page.dart (6 findings)
+  - cross_feature_coupling: 6
+
+lib/features/settings (5 findings)
+  - hardcoded_scale_risks: 2
+  - layer_violations: 2
+  - service_locator_abuse: 1
+
+lib/features/rewards (4 findings)
+  - cross_feature_coupling: 3
+  - service_locator_abuse: 1
+
+lib/features/onboarding (3 findings)
+  - layer_violations: 2
+  - service_locator_abuse: 1
+
+lib/core/navigation (1 findings)
+  - god_files: 1
+
+---
+
+Findings by Category:
+
+Coupling Risk
+  - Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (91 across 31 files)
+  Features importing each other directly increase coupling and reduce scalability.
+  Suggestion: Avoid direct feature-to-feature imports. Move shared contracts into a shared domain layer or introduce an abstraction.
+  - Global Dependency Access Across Boundaries (reduces architectural clarity) (34 across 15 files)
+  Global dependency access hides dependencies and reduces architectural clarity.
+  Suggestion: Limit service locator usage to composition roots. Inject dependencies explicitly into classes.
+
+Structural Risk
+  - Layer Boundary Crossed (may increase coupling and future refactor cost) (13 across 11 files)
+  Crossing layer boundaries increases coupling and makes refactoring harder.
+  Suggestion: Ensure domain does not depend on data or presentation. Move implementations behind interfaces.
+
+Maintainability Risk
+  - Oversized File (increases change surface and review complexity) (10 across 10 files)
+  Large files increase change surface and reduce maintainability.
+  Suggestion: Split large files into smaller focused components. Separate responsibilities by layer or feature.
+
+Configuration / Release Risk
+  - Runtime Configuration Embedded in Code (increases release and environment risk) (10 across 3 files)
+  Hardcoded configuration reduces flexibility across environments.
+  Suggestion: Move configuration to environment-based or external config files. Avoid embedding runtime values in code.
+
+---
+
+Tip:
+Use ScaleGuard in CI to prevent architecture drift:
+scale_guard scan . --fail-under 70
