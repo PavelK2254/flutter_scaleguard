@@ -392,5 +392,72 @@ void main() {
       expect(scanPathValue, contains(projectRoot.replaceAll(r'\', '/')),
           reason: 'Scan Path should be absolute path to project root');
     });
+
+    test('scaleguard.yaml score.fail_under triggers exit 2 without CLI flag',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('sg_cli_fu_');
+      addTearDown(() => dir.delete(recursive: true));
+      await File('${dir.path}/pubspec.yaml').writeAsString('name: sg_cli_fu\n');
+      await Directory('${dir.path}/lib').create(recursive: true);
+      await File('${dir.path}/lib/x.dart').writeAsString('// x\n');
+      final abs = Directory(dir.path).absolute.path;
+      final baseline = await runScan(abs);
+      final threshold = baseline.score + 1;
+      if (threshold > 100) return;
+      await File('$abs/scaleguard.yaml').writeAsString('''
+score:
+  fail_under: $threshold
+''');
+      final loaded = await ScannerConfig.loadWithDiagnostics(abs);
+      expect(loaded.config.failUnder, threshold);
+      final result = await Process.run(
+        'dart',
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          abs,
+        ],
+        workingDirectory: Directory.current.path,
+      );
+      expect(result.exitCode, 2);
+      final out = _stdoutString(result.stdout);
+      expect(
+          out,
+          contains(
+              'Exit: score ${baseline.score} is below fail-under threshold $threshold.'));
+    });
+
+    test('CLI --fail-under overrides scaleguard.yaml score.fail_under',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('sg_cli_fu2_');
+      addTearDown(() => dir.delete(recursive: true));
+      await File('${dir.path}/pubspec.yaml')
+          .writeAsString('name: sg_cli_fu2\n');
+      await Directory('${dir.path}/lib').create(recursive: true);
+      await File('${dir.path}/lib/x.dart').writeAsString('// x\n');
+      final abs = Directory(dir.path).absolute.path;
+      final baseline = await runScan(abs);
+      final threshold = baseline.score + 1;
+      if (threshold > 100) return;
+      await File('$abs/scaleguard.yaml').writeAsString('''
+score:
+  fail_under: $threshold
+''');
+      final result = await Process.run(
+        'dart',
+        [
+          'run',
+          'bin/scale_guard.dart',
+          'scan',
+          abs,
+          '--fail-under',
+          '0',
+        ],
+        workingDirectory: Directory.current.path,
+      );
+      expect(result.exitCode, isNot(2));
+      expect(result.exitCode, isIn([0, 1]));
+    });
   });
 }

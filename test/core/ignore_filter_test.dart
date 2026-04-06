@@ -34,4 +34,15 @@ void main() {
           isFalse);
     });
   });
+
+  group('glob ignore patterns on ScannerConfig', () {
+    test('lib/generated/** matches only that subtree', () {
+      final config = ScannerConfig(ignoredPatterns: [
+        'lib/generated/**',
+      ]);
+      expect(config.shouldIgnore('lib/generated/a.dart'), isTrue);
+      expect(config.shouldIgnore('lib/generated/sub/b.dart'), isTrue);
+      expect(config.shouldIgnore('lib/not_generated/x.dart'), isFalse);
+    });
+  });
 }

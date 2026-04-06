@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+import 'ignore_matcher.dart';
 import 'path_utils.dart' as path_utils;
+import 'scaleguard_yaml.dart';
 
 /// Default LOC threshold for "medium" god file finding.
 const int defaultGodFileMediumLoc = 500;
@@ -78,6 +80,8 @@ class ScannerConfig {
       'https://',
       'www.',
     ],
+    this.ruleEnabled = const {},
+    this.failUnder,
   });
 
   final List<String> featureRoots;
@@ -92,21 +96,103 @@ class ScannerConfig {
   final List<String> routeConstantPrefixes;
   final List<String> hardcodedUrlPatterns;
 
-  /// Load config from project root. If [risk_scanner.yaml] exists, merge with defaults.
+  /// Explicit rule toggles from config; absent ids default to enabled.
+  final Map<String, bool> ruleEnabled;
+
+  /// Optional minimum score for CI when not overridden by `--fail-under`.
+  final int? failUnder;
+
+  bool isRuleEnabled(String ruleId) => ruleEnabled[ruleId] ?? true;
+
+  /// Load config from project root ([scaleguard.yaml] primary, else [risk_scanner.yaml]).
+  /// Warnings from parsing are discarded; use [loadWithDiagnostics] to observe them.
   static Future<ScannerConfig> load(String projectPath) async {
-    final dir = path_utils.normalizePath(projectPath);
-    final base = dir.endsWith('/') ? dir : '$dir/';
-    final file = File('${base}risk_scanner.yaml');
-    if (!await file.exists()) {
-      return const ScannerConfig();
-    }
-    final content = await file.readAsString();
-    final yaml = loadYaml(content) as YamlMap?;
-    if (yaml == null || yaml.isEmpty) return const ScannerConfig();
-    return _fromYaml(yaml);
+    final r = await loadWithDiagnostics(projectPath);
+    return r.config;
   }
 
-  static ScannerConfig _fromYaml(YamlMap yaml) {
+  /// Loads config and returns recoverable parse warnings (e.g. unknown keys).
+  static Future<({ScannerConfig config, List<String> warnings})>
+      loadWithDiagnostics(String projectPath) async {
+    final warnings = <String>[];
+    final dir = path_utils.normalizePath(projectPath);
+    final base = dir.endsWith('/') ? dir : '$dir/';
+    final scaleguardFile = File('${base}scaleguard.yaml');
+    final riskFile = File('${base}risk_scanner.yaml');
+    final hasScale = await scaleguardFile.exists();
+    final hasRisk = await riskFile.exists();
+
+    if (hasScale && hasRisk) {
+      warnings.add(
+          'Both scaleguard.yaml and risk_scanner.yaml exist; only scaleguard.yaml is loaded. risk_scanner.yaml is ignored.');
+    }
+
+    if (hasScale) {
+      final content = await scaleguardFile.readAsString();
+      final yaml = loadYaml(content) as YamlMap?;
+      if (yaml == null || yaml.isEmpty) {
+        return (config: const ScannerConfig(), warnings: warnings);
+      }
+      final parsed = parseScaleguardYaml(yaml, warnings);
+      final config = _mergeScaleguard(const ScannerConfig(), parsed, warnings);
+      return (config: config, warnings: warnings);
+    }
+
+    if (hasRisk) {
+      final content = await riskFile.readAsString();
+      final yaml = loadYaml(content) as YamlMap?;
+      if (yaml == null || yaml.isEmpty) {
+        return (config: const ScannerConfig(), warnings: warnings);
+      }
+      return (config: _fromRiskScannerYaml(yaml), warnings: warnings);
+    }
+
+    return (config: const ScannerConfig(), warnings: warnings);
+  }
+
+  static ScannerConfig _mergeScaleguard(
+    ScannerConfig base,
+    ScaleguardParsed parsed,
+    List<String> warnings,
+  ) {
+    var medium =
+        parsed.godFileMediumLoc ?? base.godFileMediumLoc;
+    var high = parsed.godFileHighLoc ?? base.godFileHighLoc;
+    if (medium >= high) {
+      warnings.add(
+          'god_file_medium_loc must be less than god_file_high_loc; values were swapped.');
+      final t = medium;
+      medium = high;
+      high = t;
+    }
+    if (medium >= high) {
+      warnings.add(
+          'God file thresholds still invalid after swap; using defaults.');
+      medium = defaultGodFileMediumLoc;
+      high = defaultGodFileHighLoc;
+    }
+
+    final roots = parsed.featureRoots ?? base.featureRoots;
+    final mergedIgnore = mergeIgnoredPatterns(defaultIgnoredPatterns, parsed.ignoreEntries);
+
+    return ScannerConfig(
+      featureRoots: roots,
+      layerMappings: base.layerMappings,
+      ignoredPatterns: mergedIgnore,
+      godFileMediumLoc: medium,
+      godFileHighLoc: high,
+      sharedPathSegments: base.sharedPathSegments,
+      allowedLayerDependencies: base.allowedLayerDependencies,
+      allowDomainToData: base.allowDomainToData,
+      serviceLocatorPatterns: base.serviceLocatorPatterns,
+      routeConstantPrefixes: base.routeConstantPrefixes,
+      hardcodedUrlPatterns: base.hardcodedUrlPatterns,
+      ruleEnabled: Map<String, bool>.from(parsed.ruleEnabled),
+      failUnder: parsed.failUnder,
+    );
+  }
+
+  static ScannerConfig _fromRiskScannerYaml(YamlMap yaml) {
     List<String> list(String key, List<String> fallback) {
       final v = yaml[key];
       if (v == null) return fallback;
@@ -119,9 +205,9 @@ class ScannerConfig {
     final sharedPathSegments =
         list('shared_path_segments', defaultSharedPathSegments);
     final godFileMediumLoc =
-        (yaml['god_file_medium_loc'] as int?) ?? defaultGodFileMediumLoc;
+        _readYamlInt(yaml['god_file_medium_loc']) ?? defaultGodFileMediumLoc;
     final godFileHighLoc =
-        (yaml['god_file_high_loc'] as int?) ?? defaultGodFileHighLoc;
+        _readYamlInt(yaml['god_file_high_loc']) ?? defaultGodFileHighLoc;
 
     Map<String, String> layerMappings = defaultLayerMappings;
     final lm = yaml['layer_mappings'];
@@ -185,12 +271,29 @@ class ScannerConfig {
     );
   }
 
+  static int? _readYamlInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.round();
+    return null;
+  }
+
   /// Returns true if [path] should be ignored (e.g. generated files).
   bool shouldIgnore(String path) {
     final normalized = path_utils.normalizePath(path);
-    for (final p in ignoredPatterns) {
-      if (normalized.contains(p) || normalized.endsWith(p)) return true;
-    }
-    return false;
+    return shouldIgnoreNormalizedPath(normalized, ignoredPatterns);
   }
+}
+
+/// Defaults first, then [extras], deduplicated by exact pattern string.
+List<String> mergeIgnoredPatterns(List<String> defaults, List<String> extras) {
+  final seen = <String>{};
+  final out = <String>[];
+  for (final p in defaults) {
+    if (seen.add(p)) out.add(p);
+  }
+  for (final p in extras) {
+    if (seen.add(p)) out.add(p);
+  }
+  return out;
 }

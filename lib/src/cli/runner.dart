@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../core/config.dart';
 import '../core/path_utils.dart' as path_utils;
 import '../core/scanner.dart';
 import '../model/risk_level.dart';
@@ -61,7 +62,7 @@ Future<int> runCli(List<String> arguments) async {
       jsonOutput: json,
       showStats: stats,
       showDebug: debug,
-      failUnder: failUnder);
+      cliFailUnder: failUnder);
 }
 
 /// True when [rawPath] is current-directory form (e.g. ".", "./").
@@ -90,7 +91,7 @@ Future<int> _runScan(String rawPath,
     {required bool jsonOutput,
     bool showStats = false,
     bool showDebug = false,
-    int? failUnder}) async {
+    int? cliFailUnder}) async {
   final dir = Directory(rawPath);
   if (!await dir.exists() ||
       !await dir.stat().then((s) => s.type == FileSystemEntityType.directory)) {
@@ -99,8 +100,15 @@ Future<int> _runScan(String rawPath,
     return 64;
   }
   final (resolvedPath, displayName, scanPath) = _resolvePath(rawPath);
+  final loaded = await ScannerConfig.loadWithDiagnostics(resolvedPath);
+  for (final w in loaded.warnings) {
+    stderr.writeln('Config: $w');
+  }
+  final effectiveFailUnder = cliFailUnder ?? loaded.config.failUnder;
   final report = await runScan(resolvedPath,
-      projectDisplayName: displayName, scanPath: scanPath);
+      config: loaded.config,
+      projectDisplayName: displayName,
+      scanPath: scanPath);
   if (jsonOutput) {
     final version = await getPackageVersion();
     print(JsonRenderer.render(report, version: version));
@@ -110,9 +118,9 @@ Future<int> _runScan(String rawPath,
         version: version, showStats: showStats, showDebug: showDebug);
   }
 
-  if (failUnder != null && report.score < failUnder) {
+  if (effectiveFailUnder != null && report.score < effectiveFailUnder) {
     final message =
-        'Exit: score ${report.score} is below fail-under threshold $failUnder.';
+        'Exit: score ${report.score} is below fail-under threshold $effectiveFailUnder.';
     if (jsonOutput) {
       stderr.writeln(message);
     } else {
@@ -131,8 +139,10 @@ void _printHelp() {
       'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
   print('');
   print('Exit codes:');
-  print('  0  Scan succeeded (and passed --fail-under if provided)');
-  print('  2  Scan succeeded but --fail-under threshold not met');
+  print(
+      '  0  Scan succeeded (and passed fail-under if set via --fail-under or scaleguard.yaml)');
+  print(
+      '  2  Scan succeeded but fail-under threshold not met (CLI or config)');
   print('  64 Invalid usage / invalid project path (e.g., not a directory)');
   print('  1  High risk (scan succeeded but risk level is High)');
 }

@@ -1,0 +1,29 @@
+# Copy to scaleguard.yaml in your project root (optional). All keys are optional.
+#
+# Precedence: scaleguard.yaml is primary. risk_scanner.yaml is legacy; if both files
+# exist, only scaleguard.yaml is loaded and risk_scanner.yaml is ignored (warning).
+
+# Where feature modules live (same as feature_roots in risk_scanner.yaml).
+# feature_roots:
+#   - lib/features
+
+# Extra ignore patterns (merged with built-in defaults). See README for literal vs glob rules.
+# ignore:
+#   - lib/generated/**
+#   - lib/l10n/**
+#   - test/**
+
+# Enable/disable rules by id. Omitted rules stay enabled.
+# rules:
+#   service_locator_abuse: true
+#   god_files: false
+#   hardcoded_scale_risks: true
+
+# thresholds:
+#   god_file_medium_loc: 500
+#   god_file_high_loc: 900
+
+# Minimum architecture score (0–100). Exit code 2 if score is below this value.
+# Overridden by CLI: scale_guard scan . --fail-under <n>
+# score:
+#   fail_under: 75

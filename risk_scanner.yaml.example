@@ -1,5 +1,8 @@
 # Optional: copy to risk_scanner.yaml in your project root to override defaults.
 # All keys are optional.
+#
+# Prefer scaleguard.yaml for new projects (see scaleguard.yaml.example).
+# If both scaleguard.yaml and risk_scanner.yaml exist, only scaleguard.yaml is used.
 
 # feature_roots:
 #   - lib/features

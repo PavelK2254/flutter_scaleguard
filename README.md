@@ -41,7 +41,7 @@ scale_guard scan .
 # Example Output
 
 ```text
-Flutter ScaleGuard v0.5.0
+Flutter ScaleGuard v0.6.0
 Project: ./my_flutter_app
 Scan Path: ./my_flutter_app
 
@@ -215,26 +215,68 @@ A short tip at the end of the report on using ScaleGuard in CI to prevent archit
 
 | Code | Meaning |
 |-----|--------|
-| 0 | Scan succeeded (and passed `--fail-under` if provided) |
+| 0 | Scan succeeded (and passed fail-under if set via `--fail-under` or `scaleguard.yaml`) |
 | 1 | High risk (scan succeeded but risk level is High) |
-| 2 | Scan succeeded but `--fail-under` threshold not met |
+| 2 | Scan succeeded but fail-under threshold not met (CLI or config) |
 | 64 | Invalid usage / invalid project path (e.g., not a directory) |
 
 ---
 
 # Configuration (optional)
 
-ScaleGuard can be configured via a `risk_scanner.yaml` file in the project root.
+## scaleguard.yaml (recommended)
 
-Example configuration options:
+Add an optional **`scaleguard.yaml`** file in the project root. Partial config is fine; missing keys use defaults. See **[scaleguard.yaml.example](scaleguard.yaml.example)** for a commented template.
 
-| Key | Description | Default |
-|----|-------------|--------|
-| feature_roots | Paths where feature modules are located | `lib/features` |
-| layer_mappings | Mapping of folders to architecture layers | presentation / domain / data |
-| ignored_patterns | File patterns to exclude from analysis | generated files |
-| god_file_medium_loc | LOC threshold for medium file size risk | 500 |
-| god_file_high_loc | LOC threshold for high file size risk | 900 |
+**Precedence:** `scaleguard.yaml` is primary. Legacy **`risk_scanner.yaml`** remains supported. If **both** files exist, **only `scaleguard.yaml` is loaded**; `risk_scanner.yaml` is ignored and a warning is printed to stderr.
+
+**Fail-under:** Set a minimum architecture score under `score.fail_under` (integer **0–100**). The CLI flag **`--fail-under`** overrides the file when you pass it (same range).
+
+**Disabled rules:** Under `rules`, set a rule id to `false`. Disabled rules are not run and are **omitted** from JSON `ruleResults`.
+
+```yaml
+# Minimal example (all optional)
+feature_roots:
+  - lib/features
+
+ignore:
+  - lib/generated/**
+  - lib/l10n/**
+
+rules:
+  god_files: false
+  service_locator_abuse: true
+
+thresholds:
+  god_file_medium_loc: 500
+  god_file_high_loc: 900
+
+score:
+  fail_under: 75
+```
+
+- **`ignore`** — Appended to built-in default ignore patterns (deduplicated).  
+- **`rules`** — Map of rule id → `true` / `false`. Omitted rules stay enabled.
+
+### Ignore pattern semantics
+
+Paths are project-relative (forward slashes), matching how files are indexed under `lib/`.
+
+- **Literal pattern** — Does not contain `*`. Matches if the path **contains** the pattern as a substring **or** **ends with** it (same idea as older `ignored_patterns` entries like `.g.dart` or `/build/`).
+- **Glob pattern** — Contains `*`. Matching uses **only** glob rules (no extra substring pass for that entry):
+  - `**` matches zero or more **path segments** (between `/`).
+  - `*` matches zero or more characters **inside one segment** (does not cross `/`).
+
+Examples: `lib/generated/**`, `lib/l10n/**`, `**/*.g.dart`.
+
+## risk_scanner.yaml (legacy)
+
+You can still use **`risk_scanner.yaml`** alone. Keys include `feature_roots`, `layer_mappings`, `ignored_patterns`, `god_file_medium_loc`, `god_file_high_loc`, and others (see **[risk_scanner.yaml.example](risk_scanner.yaml.example)**). **`ignored_patterns`** **replaces** the entire default ignore list when this file is loaded (unlike `ignore` in `scaleguard.yaml`, which merges with defaults).
+
+### Programmatic API
+
+- **`ScannerConfig.load(projectPath)`** — Unchanged; warnings from parsing are discarded.
+- **`ScannerConfig.loadWithDiagnostics(projectPath)`** — Returns `({ScannerConfig config, List<String> warnings})` for the same merge rules as the CLI.
 
 ---
 

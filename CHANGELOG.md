@@ -5,6 +5,25 @@ All notable changes to Flutter ScaleGuard are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0]
+
+### Added
+
+- **scaleguard.yaml** — Primary optional config file: `feature_roots`, `ignore` (merged with defaults), `rules` toggles, `thresholds` (e.g. god file LOC), `score.fail_under` (0–100).
+- **ScannerConfig.loadWithDiagnostics** — Returns config plus parse warnings; **ScannerConfig.load** unchanged and discards warnings.
+- **Ignore semantics** — Literal patterns (substring / suffix match) vs path glob (`*`, `**` as path segments). See README.
+- **Import graph** — Resolved project imports pointing at ignored files are omitted from rule-facing import lists (same ignore rules as file indexing).
+- **CLI** — Prints config warnings to stderr (`Config: …`). Effective fail-under is `--fail-under` when passed, otherwise `score.fail_under` from file.
+
+### Changed
+
+- **Config precedence** — If both `scaleguard.yaml` and `risk_scanner.yaml` exist, only `scaleguard.yaml` is loaded; a warning notes that `risk_scanner.yaml` was ignored.
+- **risk_scanner.yaml** — Still supported when it is the only config file; `ignored_patterns` continues to replace the default ignore list (not merged).
+
+### JSON / reporting
+
+- Disabled rules are **not** run and are **omitted** from `ruleResults` (no new JSON fields).
+
 ## [0.5.0]
 
 Improve output usability and developer guidance:

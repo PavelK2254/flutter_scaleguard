@@ -74,8 +74,8 @@ Future<({ProjectIndex index, ScanMeta meta, Map<String, String> moduleIndex})>
     final content = await entity.readAsString();
     final lineCount = content.split('\n').length;
     final lines = includeLines ? content.split('\n') : <String>[];
-    final (imports, counts) =
-        _parseImports(content, relative, packageName, _importCache);
+    final (imports, counts) = _parseImports(
+        content, relative, packageName, _importCache, config);
     scannedFiles++;
     totalImports += counts.total;
     resolvedToProject += counts.resolvedToProject;
@@ -138,8 +138,12 @@ String _classifyImport(String target, String? resolved, String? packageName) {
   return 'unresolved';
 }
 
-(List<String>, _ImportCounts) _parseImports(String content, String fromPath,
-    String? packageName, Map<String, String?> cache) {
+(List<String>, _ImportCounts) _parseImports(
+    String content,
+    String fromPath,
+    String? packageName,
+    Map<String, String?> cache,
+    ScannerConfig config) {
   final result = <String>[];
   var total = 0;
   var resolvedToProject = 0;
@@ -172,7 +176,11 @@ String _classifyImport(String target, String? resolved, String? packageName) {
           default:
             unresolved++;
         }
-        if (resolved != null && resolved.isNotEmpty) result.add(resolved);
+        if (resolved != null &&
+            resolved.isNotEmpty &&
+            !config.shouldIgnore(resolved)) {
+          result.add(resolved);
+        }
         break;
       }
     }
@@ -211,7 +219,10 @@ Future<ScanReport> runScan(String projectPath,
   final resolvedConfig = config ?? await ScannerConfig.load(projectPath);
   final (:index, :meta, :moduleIndex) =
       await buildIndexWithMeta(projectPath, resolvedConfig);
-  final ruleList = rules ?? defaultRules;
+  final ruleList = rules ??
+      defaultRules
+          .where((r) => resolvedConfig.isRuleEnabled(r.id))
+          .toList();
   final results = <RuleResult>[];
   for (final rule in ruleList) {
     results.add(rule.run(index, resolvedConfig));
