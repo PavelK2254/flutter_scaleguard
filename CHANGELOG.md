@@ -5,6 +5,29 @@ All notable changes to Flutter ScaleGuard are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0]
+
+### Added
+
+- **Baseline workflow (explicit-only)** — `scale_guard scan <project_path> --save-baseline` saves a project-local baseline to `.scaleguard/baseline.json`, and `--compare-baseline` compares the current scan to that baseline.
+- **Baseline storage modules** — Added baseline model/builder/store/comparator internals for a compact, versioned baseline file and deterministic local comparison.
+- **Console comparison section** — When `--compare-baseline` is used and a valid baseline exists, output includes a short comparison block (score delta, risk direction, and concise change highlights).
+
+### Changed
+
+- **CLI help/usage** — Help text now documents `--save-baseline` and `--compare-baseline`.
+- **Scan flow integration** — Baseline save/compare is wired in CLI flow only; core scoring/scanner behavior remains unchanged.
+
+### Compatibility
+
+- **Default scan behavior unchanged** — `scale_guard scan <project_path>` does not auto-compare and behaves as before.
+- **JSON output unchanged** — No new JSON fields were added for baseline in v0.7.0.
+- **Exit code policy unchanged** — Baseline warnings do not alter existing exit-code semantics.
+
+### Error handling
+
+- **Resilient baseline I/O** — Missing baseline, invalid/corrupted JSON, unsupported baseline version, or save/read filesystem errors now emit warnings and continue scan execution.
+
 ## [0.6.0]
 
 ### Added
@@ -94,5 +117,7 @@ Improve output usability and developer guidance:
 ---
 
 [0.5.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.5.0
+[0.6.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.6.0
+[0.7.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.7.0
 [0.4.1]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.4.1
 [0.4.0]: https://github.com/PavelK2254/flutter_scaleguard/releases/tag/v0.4.0
