@@ -2,6 +2,7 @@ import '../core/hotspot_utils.dart';
 import '../core/module_root.dart';
 import '../core/path_utils.dart' as path_utils;
 import '../core/rule_metadata.dart';
+import '../baseline/baseline_model.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
 import '../model/risk_level.dart';
@@ -22,7 +23,10 @@ class ConsoleRenderer {
   /// When [showStats] is true and report has meta, prints Scan Stats section.
   /// When [showDebug] is true, appends Debug Details (penalties, capHits, hotspot metrics).
   static void render(ScanReport report,
-      {String? version, bool showStats = false, bool showDebug = false}) {
+      {String? version,
+      bool showStats = false,
+      bool showDebug = false,
+      BaselineComparison? baselineComparison}) {
     final v = version ?? fallbackPackageVersion;
     final versionLabel = v.startsWith('v') ? v : 'v$v';
     print('Flutter ScaleGuard $versionLabel');
@@ -32,6 +36,10 @@ class ConsoleRenderer {
     print('');
     print('Architecture Score: ${report.score}/100');
     print('Risk Level: ${_riskLevelLabel(report.riskLevel)}');
+    if (baselineComparison != null) {
+      print('');
+      _printBaselineComparison(baselineComparison);
+    }
     print('');
 
     final agg = report.aggregation;
@@ -532,5 +540,62 @@ class ConsoleRenderer {
     final label = ruleIdToDisplayLabel[f.ruleId] ?? f.ruleId;
     print('  [$label] ${f.file}$loc');
     print('    ${f.message}');
+  }
+
+  static void _printBaselineComparison(BaselineComparison comparison) {
+    final status = comparison.scoreDelta > 0
+        ? 'Improved (+${comparison.scoreDelta})'
+        : comparison.scoreDelta < 0
+            ? 'Regressed (${comparison.scoreDelta})'
+            : 'Unchanged (0)';
+    if (!comparison.meaningful) {
+      print('Baseline comparison: No meaningful change');
+    } else {
+      print('Baseline comparison: $status');
+    }
+    if (comparison.riskDirection == BaselineRiskDirection.up) {
+      print('Risk transition: Increased');
+    } else if (comparison.riskDirection == BaselineRiskDirection.down) {
+      print('Risk transition: Decreased');
+    }
+
+    final topCategory = comparison.categoryDeltas.isNotEmpty
+        ? comparison.categoryDeltas.first
+        : null;
+    if (topCategory != null) {
+      final sign = topCategory.delta > 0 ? '+' : '';
+      print(
+          'Top category delta: ${topCategory.category} ($sign${topCategory.delta.toStringAsFixed(2)})');
+    }
+
+    final changedHotspots = comparison.hotspotDeltas
+        .where((d) => d.changeType != HotspotChangeType.unchanged)
+        .toList();
+    if (changedHotspots.isNotEmpty) {
+      final sample = changedHotspots.first;
+      switch (sample.changeType) {
+        case HotspotChangeType.entered:
+          print('Hotspot change: entered ${sample.path}');
+          break;
+        case HotspotChangeType.exited:
+          print('Hotspot change: exited ${sample.path}');
+          break;
+        case HotspotChangeType.changed:
+          print(
+              'Hotspot change: ${sample.path} (${sample.baselineRisk ?? 0} -> ${sample.currentRisk ?? 0})');
+          break;
+        case HotspotChangeType.unchanged:
+          break;
+      }
+    }
+
+    final findingsDelta = comparison.findingsDelta.totalDelta;
+    if (findingsDelta != 0) {
+      final sign = findingsDelta > 0 ? '+' : '';
+      print('Findings delta: $sign$findingsDelta');
+    }
+    if (comparison.hasConfigMismatch) {
+      print('Note: Comparison may be affected by config differences.');
+    }
   }
 }

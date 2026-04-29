@@ -1,7 +1,12 @@
 import 'dart:io';
 
+import '../baseline/baseline_builder.dart';
+import '../baseline/baseline_compare.dart';
+import '../baseline/baseline_model.dart';
+import '../baseline/baseline_store.dart';
 import '../core/config.dart';
 import '../core/path_utils.dart' as path_utils;
+import '../core/rule_metadata.dart';
 import '../core/scanner.dart';
 import '../model/risk_level.dart';
 import '../render/console_renderer.dart';
@@ -19,6 +24,8 @@ Future<int> runCli(List<String> arguments) async {
   final json = arguments.contains('--json');
   final stats = arguments.contains('--stats');
   final debug = arguments.contains('--debug');
+  final saveBaseline = arguments.contains('--save-baseline');
+  final compareBaseline = arguments.contains('--compare-baseline');
 
   int? failUnder;
   final failUnderIdx = arguments.indexOf('--fail-under');
@@ -43,6 +50,8 @@ Future<int> runCli(List<String> arguments) async {
     if (a == '--json' ||
         a == '--stats' ||
         a == '--debug' ||
+        a == '--save-baseline' ||
+        a == '--compare-baseline' ||
         a == '--help' ||
         a == '-h') continue;
     if (a == '--fail-under') {
@@ -53,7 +62,7 @@ Future<int> runCli(List<String> arguments) async {
   }
   if (args.length < 2 || args[0] != 'scan') {
     print(
-        'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
+        'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>] [--save-baseline] [--compare-baseline]');
     print('Use --help for exit codes and options.');
     return 64;
   }
@@ -62,6 +71,8 @@ Future<int> runCli(List<String> arguments) async {
       jsonOutput: json,
       showStats: stats,
       showDebug: debug,
+      saveBaseline: saveBaseline,
+      compareBaseline: compareBaseline,
       cliFailUnder: failUnder);
 }
 
@@ -91,6 +102,8 @@ Future<int> _runScan(String rawPath,
     {required bool jsonOutput,
     bool showStats = false,
     bool showDebug = false,
+    bool saveBaseline = false,
+    bool compareBaseline = false,
     int? cliFailUnder}) async {
   final dir = Directory(rawPath);
   if (!await dir.exists() ||
@@ -109,13 +122,54 @@ Future<int> _runScan(String rawPath,
       config: loaded.config,
       projectDisplayName: displayName,
       scanPath: scanPath);
+  BaselineComparison? baselineComparison;
+  final baselinePath = BaselineStore.baselinePathForProject(resolvedPath);
+  final version = await getPackageVersion();
+
+  final currentSnapshot = BaselineConfigSnapshot(
+    enabledRuleIds: _enabledRuleIds(loaded.config),
+    ignoreCount: loaded.config.ignoredPatterns.length,
+    featureRoots: [...loaded.config.featureRoots]..sort(),
+  );
+
+  if (compareBaseline) {
+    final load = await BaselineStore.load(baselinePath);
+    if (load.warning != null) {
+      stderr.writeln('Baseline: ${load.warning}');
+    } else if (load.baseline != null) {
+      baselineComparison = BaselineComparator.compare(
+        baseline: load.baseline!,
+        currentReport: report,
+        currentConfigSnapshot: currentSnapshot,
+      );
+    }
+  }
+
   if (jsonOutput) {
-    final version = await getPackageVersion();
     print(JsonRenderer.render(report, version: version));
   } else {
-    final version = await getPackageVersion();
     ConsoleRenderer.render(report,
-        version: version, showStats: showStats, showDebug: showDebug);
+        version: version,
+        showStats: showStats,
+        showDebug: showDebug,
+        baselineComparison: baselineComparison);
+  }
+
+  if (saveBaseline) {
+    try {
+      final baseline = BaselineBuilder.fromScan(
+        report: report,
+        config: loaded.config,
+        toolVersion: version,
+        projectRelativePath: '.',
+      );
+      await BaselineStore.save(baselinePath, baseline);
+      if (!jsonOutput) {
+        print('Baseline saved: ${BaselineStore.baselineRelativePath}');
+      }
+    } on FileSystemException catch (e) {
+      stderr.writeln('Baseline: failed to save baseline (${e.message}).');
+    }
   }
 
   if (effectiveFailUnder != null && report.score < effectiveFailUnder) {
@@ -136,7 +190,7 @@ Future<int> _runScan(String rawPath,
 
 void _printHelp() {
   print(
-      'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>]');
+      'Usage: scale_guard scan <project_path> [--json] [--stats] [--debug] [--fail-under <0-100>] [--save-baseline] [--compare-baseline]');
   print('');
   print('Exit codes:');
   print(
@@ -145,4 +199,21 @@ void _printHelp() {
       '  2  Scan succeeded but fail-under threshold not met (CLI or config)');
   print('  64 Invalid usage / invalid project path (e.g., not a directory)');
   print('  1  High risk (scan succeeded but risk level is High)');
+  print('');
+  print('Baseline options:');
+  print(
+      '  --save-baseline     Save current scan as .scaleguard/baseline.json');
+  print(
+      '  --compare-baseline  Compare current scan to .scaleguard/baseline.json');
+}
+
+List<String> _enabledRuleIds(ScannerConfig config) {
+  final out = <String>[];
+  for (final ruleId in ruleIdToCategory.keys) {
+    if (config.isRuleEnabled(ruleId)) {
+      out.add(ruleId);
+    }
+  }
+  out.sort();
+  return out;
 }
