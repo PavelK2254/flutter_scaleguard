@@ -459,5 +459,92 @@ score:
       expect(result.exitCode, isNot(2));
       expect(result.exitCode, isIn([0, 1]));
     });
+
+    test('--save-baseline creates .scaleguard/baseline.json', () async {
+      final dir = await Directory.systemTemp.createTemp('sg_baseline_save_');
+      addTearDown(() => dir.delete(recursive: true));
+      await File('${dir.path}/pubspec.yaml').writeAsString('name: sg_save\n');
+      await Directory('${dir.path}/lib').create(recursive: true);
+      await File('${dir.path}/lib/x.dart').writeAsString('// x\n');
+
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir.path, '--save-baseline'],
+        workingDirectory: Directory.current.path,
+      );
+
+      expect(result.exitCode, isIn([0, 1]));
+      expect(_stdoutString(result.stdout), contains('Baseline saved:'));
+      expect(File('${dir.path}/.scaleguard/baseline.json').existsSync(), isTrue);
+    });
+
+    test('--compare-baseline warns and continues when baseline is missing',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('sg_baseline_missing_');
+      addTearDown(() => dir.delete(recursive: true));
+      await File('${dir.path}/pubspec.yaml').writeAsString('name: sg_cmp\n');
+      await Directory('${dir.path}/lib').create(recursive: true);
+      await File('${dir.path}/lib/x.dart').writeAsString('// x\n');
+
+      final result = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir.path, '--compare-baseline'],
+        workingDirectory: Directory.current.path,
+      );
+
+      expect(result.exitCode, isIn([0, 1]));
+      expect(_stderrString(result.stderr), contains('Baseline not found'));
+      expect(_stdoutString(result.stdout), contains('Architecture Score:'));
+    });
+
+    test('--compare-baseline with saved baseline prints comparison section',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('sg_baseline_cmp_');
+      addTearDown(() => dir.delete(recursive: true));
+      await File('${dir.path}/pubspec.yaml').writeAsString('name: sg_cmp2\n');
+      await Directory('${dir.path}/lib').create(recursive: true);
+      await File('${dir.path}/lib/x.dart').writeAsString('// x\n');
+
+      await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir.path, '--save-baseline'],
+        workingDirectory: Directory.current.path,
+      );
+
+      final compareResult = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir.path, '--compare-baseline'],
+        workingDirectory: Directory.current.path,
+      );
+
+      expect(compareResult.exitCode, isIn([0, 1]));
+      final out = _stdoutString(compareResult.stdout);
+      expect(out, contains('Baseline comparison:'));
+      expect(out, isNot(contains('Baseline saved:')));
+    });
+
+    test('plain scan remains unchanged even when baseline exists', () async {
+      final dir = await Directory.systemTemp.createTemp('sg_baseline_plain_');
+      addTearDown(() => dir.delete(recursive: true));
+      await File('${dir.path}/pubspec.yaml').writeAsString('name: sg_plain\n');
+      await Directory('${dir.path}/lib').create(recursive: true);
+      await File('${dir.path}/lib/x.dart').writeAsString('// x\n');
+
+      await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir.path, '--save-baseline'],
+        workingDirectory: Directory.current.path,
+      );
+
+      final plainResult = await Process.run(
+        'dart',
+        ['run', 'bin/scale_guard.dart', 'scan', dir.path],
+        workingDirectory: Directory.current.path,
+      );
+
+      expect(plainResult.exitCode, isIn([0, 1]));
+      expect(
+          _stdoutString(plainResult.stdout), isNot(contains('Baseline comparison:')));
+    });
   });
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:scale_guard/scale_guard.dart';
+import 'package:scale_guard/src/baseline/baseline_model.dart';
 import 'package:scale_guard/src/core/rule_metadata.dart' as meta;
 import 'package:test/test.dart';
 
@@ -879,6 +880,49 @@ void main() {
       expect(debugDetailsIdx, greaterThanOrEqualTo(0));
       expect(debugDetailsIdx, greaterThan(scanStatsIdx),
           reason: 'Debug Details must come after Scan Stats');
+    });
+  });
+
+  group('Baseline comparison section', () {
+    test('prints concise baseline comparison lines when provided', () {
+      final report = ScanReport(
+        score: 80,
+        riskLevel: RiskLevel.medium,
+        ruleResults: const [],
+        uniqueFindings: const [],
+        timestamp: DateTime.utc(2025, 1, 1),
+      );
+      const comparison = BaselineComparison(
+        scoreDelta: -3,
+        riskDirection: BaselineRiskDirection.up,
+        meaningful: true,
+        categoryDeltas: [CategoryDelta(category: 'Structural Risk', delta: 2)],
+        hotspotDeltas: [
+          HotspotDelta(
+            path: 'lib/features/a',
+            changeType: HotspotChangeType.entered,
+            currentRisk: 3,
+            baselineRisk: null,
+          )
+        ],
+        findingsDelta: FindingsDelta(
+          totalDelta: 2,
+          highDelta: 1,
+          mediumDelta: 1,
+          lowDelta: 0,
+        ),
+        hasConfigMismatch: true,
+      );
+
+      final lines = _capturePrint(
+          () => ConsoleRenderer.render(report, baselineComparison: comparison));
+      final out = lines.join('\n');
+      expect(out, contains('Baseline comparison: Regressed (-3)'));
+      expect(out, contains('Risk transition: Increased'));
+      expect(out, contains('Top category delta: Structural Risk (+2.00)'));
+      expect(out, contains('Hotspot change: entered lib/features/a'));
+      expect(out, contains('Findings delta: +2'));
+      expect(out, contains('Comparison may be affected by config differences'));
     });
   });
 }
