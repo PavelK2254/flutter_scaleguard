@@ -884,7 +884,7 @@ void main() {
   });
 
   group('Baseline comparison section', () {
-    test('prints concise baseline comparison lines when provided', () {
+    test('prints grouped New risks and Improved sections when meaningful', () {
       final report = ScanReport(
         score: 80,
         riskLevel: RiskLevel.medium,
@@ -896,14 +896,23 @@ void main() {
         scoreDelta: -3,
         riskDirection: BaselineRiskDirection.up,
         meaningful: true,
-        categoryDeltas: [CategoryDelta(category: 'Structural Risk', delta: 2)],
+        categoryDeltas: [
+          CategoryDelta(category: 'Structural Risk', delta: 2),
+          CategoryDelta(category: 'Maintainability Risk', delta: -2),
+        ],
         hotspotDeltas: [
           HotspotDelta(
             path: 'lib/features/a',
             changeType: HotspotChangeType.entered,
             currentRisk: 3,
             baselineRisk: null,
-          )
+          ),
+          HotspotDelta(
+            path: 'lib/features/auth',
+            changeType: HotspotChangeType.exited,
+            currentRisk: null,
+            baselineRisk: 2,
+          ),
         ],
         findingsDelta: FindingsDelta(
           totalDelta: 2,
@@ -918,11 +927,128 @@ void main() {
           () => ConsoleRenderer.render(report, baselineComparison: comparison));
       final out = lines.join('\n');
       expect(out, contains('Baseline comparison: Regressed (-3)'));
+      expect(out, contains('New risks:'));
+      expect(out, contains('+ Structural Risk penalty increased by 2'));
+      expect(out, contains('+ New hotspot: lib/features/a (3 findings)'));
+      expect(out, contains('Improved:'));
+      expect(out, contains('- Maintainability Risk penalty decreased by 2'));
+      expect(out, contains('- Hotspot resolved: lib/features/auth'));
       expect(out, contains('Risk transition: Increased'));
-      expect(out, contains('Top category delta: Structural Risk (+2.00)'));
-      expect(out, contains('Hotspot change: entered lib/features/a'));
       expect(out, contains('Findings delta: +2'));
       expect(out, contains('Comparison may be affected by config differences'));
+      expect(out, isNot(contains('Top category delta:')));
+      expect(out, isNot(contains('Hotspot change:')));
+    });
+
+    test('prints only header when not meaningful', () {
+      const comparison = BaselineComparison(
+        scoreDelta: 1,
+        riskDirection: BaselineRiskDirection.same,
+        meaningful: false,
+        categoryDeltas: [CategoryDelta(category: 'Coupling Risk', delta: 1)],
+        hotspotDeltas: const [],
+        findingsDelta: FindingsDelta(
+          totalDelta: 1,
+          highDelta: 0,
+          mediumDelta: 1,
+          lowDelta: 0,
+        ),
+        hasConfigMismatch: false,
+      );
+      final report = ScanReport(
+        score: 81,
+        riskLevel: RiskLevel.low,
+        ruleResults: const [],
+        uniqueFindings: const [],
+        timestamp: DateTime.utc(2025, 1, 1),
+      );
+      final out = _capturePrint(() =>
+              ConsoleRenderer.render(report, baselineComparison: comparison))
+          .join('\n');
+      expect(out, contains('Baseline comparison: No meaningful change'));
+      expect(out, isNot(contains('New risks:')));
+      expect(out, isNot(contains('Findings delta:')));
+    });
+  });
+
+  group('Score Breakdown and Fix Priorities', () {
+    test('Score Breakdown appears when penalty > 0 and hidden at score 100', () {
+      final results = [
+        RuleResult(ruleId: 'cross_feature_coupling', penalty: 5, findings: []),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+      );
+      final withPenalty = ScanReport(
+        score: 95,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: const [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+      );
+      final withPenaltyOut =
+          _capturePrint(() => ConsoleRenderer.render(withPenalty)).join('\n');
+      expect(withPenaltyOut, contains('Score Breakdown'));
+      expect(withPenaltyOut, contains('Coupling Risk'));
+      expect(withPenaltyOut, contains('-5'));
+
+      final clean = ScanReport(
+        score: 100,
+        riskLevel: RiskLevel.low,
+        ruleResults: const [],
+        uniqueFindings: const [],
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: CategoryAggregation.fromRuleResults([], _ruleIdToCategory),
+      );
+      final cleanOut =
+          _capturePrint(() => ConsoleRenderer.render(clean)).join('\n');
+      expect(cleanOut, isNot(contains('Score Breakdown')));
+    });
+
+    test('Top Fix Priorities uses rule-based format', () {
+      final findings = [
+        Finding(
+          severity: FindingSeverity.high,
+          ruleId: 'cross_feature_coupling',
+          file: 'lib/features/a/a.dart',
+          message: 'm',
+        ),
+        Finding(
+          severity: FindingSeverity.high,
+          ruleId: 'cross_feature_coupling',
+          file: 'lib/features/a/b.dart',
+          message: 'm',
+        ),
+      ];
+      final results = [
+        RuleResult(
+          ruleId: 'cross_feature_coupling',
+          penalty: 6,
+          findings: findings,
+        ),
+      ];
+      final aggregation = CategoryAggregation.fromRuleResults(
+        results,
+        _ruleIdToCategory,
+        uniqueFindings: findings,
+      );
+      final report = ScanReport(
+        score: 94,
+        riskLevel: RiskLevel.low,
+        ruleResults: results,
+        uniqueFindings: findings,
+        timestamp: DateTime.utc(2025, 1, 1),
+        aggregation: aggregation,
+      );
+      final out =
+          _capturePrint(() => ConsoleRenderer.render(report)).join('\n');
+      expect(out, contains('Top Fix Priorities'));
+      expect(out, contains('Reduce cross-feature coupling'));
+      expect(out, contains('Area: Coupling Risk'));
+      expect(out, contains('Estimated score gain: up to +6'));
+      expect(out, isNot(contains('dominant: cross_feature_coupling')));
     });
   });
 }

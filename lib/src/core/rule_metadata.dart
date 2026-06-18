@@ -63,6 +63,17 @@ final Map<String, String> ruleIdToDisplayLabel = Map.unmodifiable({
       'Navigation Logic Bypasses Routing Layer (tightens screen coupling)',
 });
 
+/// Short imperative titles for Top Fix Priorities (action-first, rule-based).
+final Map<String, String> ruleIdToFixActionTitle = Map.unmodifiable({
+  'cross_feature_coupling': 'Reduce cross-feature coupling',
+  'layer_violations': 'Fix layer boundary violations',
+  'shared_boundary_leakage': 'Stop shared boundary leakage',
+  'god_files': 'Split oversized files',
+  'service_locator_abuse': 'Reduce service locator usage',
+  'hardcoded_scale_risks': 'Externalize hardcoded configuration',
+  'navigation_coupling': 'Reduce navigation coupling',
+});
+
 /// One to two lines explaining the problem. Used for Findings by Category and Top Fix Priorities.
 final Map<String, String> ruleIdToDescription = Map.unmodifiable({
   'cross_feature_coupling':

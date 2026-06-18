@@ -5,6 +5,27 @@ All notable changes to Flutter ScaleGuard are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0]
+
+### Added
+
+- **Score Breakdown** — Default console section showing category penalty totals when the architecture score is below 100 (explains where deductions come from).
+- **Rule-based Top Fix Priorities** — Replaces hotspot-path priorities with actionable, rule-ranked fix suggestions including area, impact, estimated score gain (`up to +N`), and a deterministic why line.
+- **Explain layer** — New `FixPriorityAnalyzer` and related models derive priorities from existing scan/scoring data without changing score semantics.
+- **Richer baseline comparison** — `--compare-baseline` output groups changes into **New risks** and **Improved** sections (category penalty deltas and hotspot changes).
+
+### Changed
+
+- **Top Fix Priorities format** — Action-first (e.g. "Reduce cross-feature coupling") instead of module-path listing; path-level detail remains in the **Hotspots** section.
+- **Baseline load hardening** — Sparse `categoryPenalties` in baseline v1 files are normalized with missing canonical categories defaulting to `0.0` on load (file format unchanged).
+
+### Compatibility
+
+- **JSON output unchanged** — No schema or field changes in v0.8.0.
+- **Baseline file format unchanged** — Still baseline v1; existing `.scaleguard/baseline.json` files remain valid.
+- **CLI flags unchanged** — No new flags; exit codes and fail-under behavior preserved.
+- **Scoring unchanged** — Core scanner and scoring engine behavior is identical to v0.7.0.
+
 ## [0.7.0]
 
 ### Added

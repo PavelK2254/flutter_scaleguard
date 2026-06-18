@@ -3,6 +3,8 @@ import '../core/module_root.dart';
 import '../core/path_utils.dart' as path_utils;
 import '../core/rule_metadata.dart';
 import '../baseline/baseline_model.dart';
+import '../explain/fix_priority_analyzer.dart';
+import '../explain/score_breakdown.dart';
 import '../model/category_aggregation.dart';
 import '../model/finding.dart';
 import '../model/risk_level.dart';
@@ -43,7 +45,10 @@ class ConsoleRenderer {
     print('');
 
     final agg = report.aggregation;
-    if (agg != null) {
+      if (agg != null) {
+      if (scoreBreakdownEntries(agg).isNotEmpty) {
+        _printScoreBreakdown(agg);
+      }
       final useSoft = report.score >= 90 ||
           (agg.totalPenalty <= _softPenaltyThreshold && agg.totalPenalty > 0);
       final summaries = useSoft ? categoryToSummarySoft : categoryToSummary;
@@ -441,7 +446,7 @@ class ConsoleRenderer {
     return moduleRootKey(norm);
   }
 
-  /// Per-path, per-rule finding counts. Used by Top Fix Priorities and Hotspots.
+  /// Per-path, per-rule finding counts. Used by Hotspots.
   static Map<String, Map<String, int>> _getRuleCountByPath(ScanReport report) {
     final ruleCountByKey = <String, Map<String, int>>{};
     for (final f in report.uniqueFindings) {
@@ -453,51 +458,34 @@ class ConsoleRenderer {
     return ruleCountByKey;
   }
 
-  /// Dominant rule for a path: rule with highest count; ties broken by rule id asc.
-  static String? _dominantRuleForPath(Map<String, int> ruleCounts) {
-    if (ruleCounts.isEmpty) return null;
-    final entries = ruleCounts.entries.toList()
-      ..sort((a, b) {
-        final byCount = b.value.compareTo(a.value);
-        if (byCount != 0) return byCount;
-        return a.key.compareTo(b.key);
-      });
-    return entries.first.key;
-  }
-
-  /// First line or sentence of suggestion for use as short hint. Returns null if empty.
-  static String? _shortHint(String suggestion) {
-    final t = suggestion.trim();
-    if (t.isEmpty) return null;
-    final firstLine =
-        t.contains('\n') ? t.substring(0, t.indexOf('\n')).trim() : t;
-    final firstSentence = firstLine.contains('.')
-        ? firstLine.substring(0, firstLine.indexOf('.') + 1).trim()
-        : firstLine;
-    return firstSentence.isEmpty ? null : firstSentence;
+  static void _printScoreBreakdown(CategoryAggregation aggregation) {
+    final entries = scoreBreakdownEntries(aggregation);
+    if (entries.isEmpty) return;
+    print('Score Breakdown');
+    print('');
+    for (final e in entries) {
+      print('${e.key.padRight(32)} -${e.value}');
+    }
+    print('');
   }
 
   static void _printTopFixPriorities(ScanReport report) {
-    final ordered = HotspotUtils.getOrderedHotspotEntries(report);
-    if (ordered.isEmpty) return;
-    final ruleCountByKey = _getRuleCountByPath(report);
-    final topN = ordered.take(3).toList();
-    print('Top Fix Priorities:');
+    final priorities = analyzeFixPriorities(report);
+    if (priorities.isEmpty) return;
+    print('Top Fix Priorities');
     print('');
-    for (var i = 0; i < topN.length; i++) {
-      final e = topN[i];
-      final ruleCounts = ruleCountByKey[e.path] ?? {};
-      final dominant = _dominantRuleForPath(ruleCounts);
-      print('${i + 1}. ${e.path}');
-      print('   - ${e.count} findings');
-      if (dominant != null) {
-        print('   - dominant: $dominant');
-        final suggestion = ruleIdToSuggestion[dominant] ?? '';
-        final hint = _shortHint(suggestion);
-        if (hint != null && hint.isNotEmpty) {
-          print('   - $hint');
-        }
-      }
+    for (var i = 0; i < priorities.length; i++) {
+      final p = priorities[i];
+      print('${i + 1}. ${p.actionTitle}');
+      print('   Area: ${p.area}');
+      print('   Impact: ${p.impact}');
+      print('   Estimated score gain: up to +${p.estimatedScoreGain}');
+      print('   Why: ${p.why}');
+      print('');
+    }
+    if (priorities.any((p) => p.isCapped)) {
+      print(
+          'Note: Some rules reached their penalty cap; fixing some findings may yield less until count drops.');
       print('');
     }
   }
@@ -543,50 +531,91 @@ class ConsoleRenderer {
   }
 
   static void _printBaselineComparison(BaselineComparison comparison) {
+    if (!comparison.meaningful) {
+      print('Baseline comparison: No meaningful change');
+      return;
+    }
+
     final status = comparison.scoreDelta > 0
         ? 'Improved (+${comparison.scoreDelta})'
         : comparison.scoreDelta < 0
             ? 'Regressed (${comparison.scoreDelta})'
             : 'Unchanged (0)';
-    if (!comparison.meaningful) {
-      print('Baseline comparison: No meaningful change');
-    } else {
-      print('Baseline comparison: $status');
+    print('Baseline comparison: $status');
+    print('');
+
+    const maxItems = 3;
+    final newRisks = <String>[];
+    for (final d in comparison.categoryDeltas) {
+      if (d.delta <= 0 || newRisks.length >= maxItems) continue;
+      newRisks.add(
+          '+ ${d.category} penalty increased by ${d.delta.round()}');
     }
+    for (final d in comparison.hotspotDeltas) {
+      if (newRisks.length >= maxItems) break;
+      switch (d.changeType) {
+        case HotspotChangeType.entered:
+          newRisks.add(
+              '+ New hotspot: ${d.path} (${d.currentRisk ?? 0} findings)');
+          break;
+        case HotspotChangeType.changed:
+          final baseline = d.baselineRisk ?? 0;
+          final current = d.currentRisk ?? 0;
+          if (current > baseline) {
+            newRisks.add(
+                '+ Hotspot worsened: ${d.path} ($baseline -> $current findings)');
+          }
+          break;
+        case HotspotChangeType.exited:
+        case HotspotChangeType.unchanged:
+          break;
+      }
+    }
+    if (newRisks.isNotEmpty) {
+      print('New risks:');
+      for (final line in newRisks) {
+        print(line);
+      }
+      print('');
+    }
+
+    final improved = <String>[];
+    for (final d in comparison.categoryDeltas) {
+      if (d.delta >= 0 || improved.length >= maxItems) continue;
+      improved.add(
+          '- ${d.category} penalty decreased by ${d.delta.abs().round()}');
+    }
+    for (final d in comparison.hotspotDeltas) {
+      if (improved.length >= maxItems) break;
+      switch (d.changeType) {
+        case HotspotChangeType.exited:
+          improved.add('- Hotspot resolved: ${d.path}');
+          break;
+        case HotspotChangeType.changed:
+          final baseline = d.baselineRisk ?? 0;
+          final current = d.currentRisk ?? 0;
+          if (current < baseline) {
+            improved.add(
+                '- Hotspot improved: ${d.path} ($baseline -> $current findings)');
+          }
+          break;
+        case HotspotChangeType.entered:
+        case HotspotChangeType.unchanged:
+          break;
+      }
+    }
+    if (improved.isNotEmpty) {
+      print('Improved:');
+      for (final line in improved) {
+        print(line);
+      }
+      print('');
+    }
+
     if (comparison.riskDirection == BaselineRiskDirection.up) {
       print('Risk transition: Increased');
     } else if (comparison.riskDirection == BaselineRiskDirection.down) {
       print('Risk transition: Decreased');
-    }
-
-    final topCategory = comparison.categoryDeltas.isNotEmpty
-        ? comparison.categoryDeltas.first
-        : null;
-    if (topCategory != null) {
-      final sign = topCategory.delta > 0 ? '+' : '';
-      print(
-          'Top category delta: ${topCategory.category} ($sign${topCategory.delta.toStringAsFixed(2)})');
-    }
-
-    final changedHotspots = comparison.hotspotDeltas
-        .where((d) => d.changeType != HotspotChangeType.unchanged)
-        .toList();
-    if (changedHotspots.isNotEmpty) {
-      final sample = changedHotspots.first;
-      switch (sample.changeType) {
-        case HotspotChangeType.entered:
-          print('Hotspot change: entered ${sample.path}');
-          break;
-        case HotspotChangeType.exited:
-          print('Hotspot change: exited ${sample.path}');
-          break;
-        case HotspotChangeType.changed:
-          print(
-              'Hotspot change: ${sample.path} (${sample.baselineRisk ?? 0} -> ${sample.currentRisk ?? 0})');
-          break;
-        case HotspotChangeType.unchanged:
-          break;
-      }
     }
 
     final findingsDelta = comparison.findingsDelta.totalDelta;

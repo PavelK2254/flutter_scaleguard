@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../core/rule_metadata.dart';
 import '../model/risk_level.dart';
 import 'baseline_model.dart';
 
@@ -117,6 +118,9 @@ class BaselineStore {
       if (value is num) {
         categoryPenalties[entry.key] = value.toDouble();
       }
+    }
+    for (final category in allCategories) {
+      categoryPenalties.putIfAbsent(category, () => 0.0);
     }
 
     final findingsRaw = json['findings'];
