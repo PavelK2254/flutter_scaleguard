@@ -78,4 +78,31 @@ void main() {
     expect(result.baseline, isNull);
     expect(result.warning, contains('Unsupported baselineVersion'));
   });
+
+  test('load normalizes missing canonical category penalties to zero', () async {
+    final dir = await Directory.systemTemp.createTemp('sg_baseline_sparse_');
+    addTearDown(() => dir.delete(recursive: true));
+    final baselinePath = BaselineStore.baselinePathForProject(dir.path);
+    final file = File(baselinePath);
+    await file.parent.create(recursive: true);
+    await file.writeAsString('''
+{
+  "baselineVersion": 1,
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "summary": {
+    "score": 90,
+    "riskLevel": "Low",
+    "categoryPenalties": {"Coupling Risk": 2.0},
+    "topHotspots": [],
+    "findings": {"total": 1, "bySeverity": {"high": 0, "medium": 1, "low": 0}}
+  }
+}
+''');
+    final loaded = await BaselineStore.load(baselinePath);
+    expect(loaded.baseline, isNotNull);
+    expect(loaded.baseline!.summary.categoryPenalties['Coupling Risk'], 2.0);
+    expect(loaded.baseline!.summary.categoryPenalties['Structural Risk'], 0.0);
+    expect(
+        loaded.baseline!.summary.categoryPenalties['Maintainability Risk'], 0.0);
+  });
 }

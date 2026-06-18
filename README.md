@@ -41,17 +41,24 @@ scale_guard scan .
 # Example Output
 
 ```text
-Flutter ScaleGuard v0.6.0
+Flutter ScaleGuard v0.8.0
 Project: ./my_flutter_app
 Scan Path: ./my_flutter_app
 
 Architecture Score: 69/100
 Risk Level: Medium
 
+Score Breakdown
+
+Coupling Risk                      -15
+Maintainability Risk                -8
+Configuration / Release Risk         -6
+Structural Risk                      -2
+
 Summary:
 This codebase shows early-stage coupling patterns that may reduce feature isolation as the team scales.
 
-Dominant Risk Category: Coupling Risk (69% of total penalty)
+Dominant Risk Category: Coupling Risk (52% of total penalty)
 Most Expensive Risk: Feature Module Imports Another Feature (reduces isolation and scaling flexibility) (-15.0) [Coupling Risk] [rule: cross_feature_coupling]
 Hotspot (source): lib/features/user_profile (42 findings)
 Examples:
@@ -60,17 +67,25 @@ Examples:
 
 ---
 
-Top Fix Priorities:
+Top Fix Priorities
 
-1. lib/features/user_profile
-   - 42 findings
-   - dominant: cross_feature_coupling
-   - Avoid direct feature-to-feature imports.
+1. Reduce cross-feature coupling
+   Area: Coupling Risk
+   Impact: High
+   Estimated score gain: up to +15
+   Why: 91 findings relate to feature-to-feature imports.
 
-2. lib/features/dashboard
-   - 28 findings
-   - dominant: cross_feature_coupling
-   - Avoid direct feature-to-feature imports.
+2. Split oversized files
+   Area: Maintainability Risk
+   Impact: Medium
+   Estimated score gain: up to +8
+   Why: 3 files exceed god-file thresholds.
+
+3. Reduce service locator usage
+   Area: Coupling Risk
+   Impact: Medium
+   Estimated score gain: up to +6
+   Why: Service locator usage appears across 4 module paths.
 
 
 Hotspots:
